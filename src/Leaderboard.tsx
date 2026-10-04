@@ -24,6 +24,55 @@ type LeaderboardProps = {
   onJoin: () => void
 }
 
+type TimedRewardId = 'hourly' | 'sixHour' | 'daily'
+
+type TimedRewardDefinition = {
+  id: TimedRewardId
+  label: string
+  description: string
+  points: number
+  cooldownMs: number
+}
+
+const TIMED_REWARDS: TimedRewardDefinition[] = [
+  {
+    id: 'hourly',
+    label: 'Hourly Signal',
+    description: 'A small leaderboard boost every hour.',
+    points: 10,
+    cooldownMs: 60 * 60 * 1000,
+  },
+  {
+    id: 'sixHour',
+    label: 'Operations Cache',
+    description: 'A larger cache that refreshes every six hours.',
+    points: 75,
+    cooldownMs: 6 * 60 * 60 * 1000,
+  },
+  {
+    id: 'daily',
+    label: 'Daily Command Drop',
+    description: 'The main daily DANJI leaderboard reward.',
+    points: 250,
+    cooldownMs: 24 * 60 * 60 * 1000,
+  },
+]
+
+const formatCountdown = (milliseconds: number) => {
+  if (milliseconds <= 0) return 'READY'
+
+  const totalSeconds = Math.ceil(milliseconds / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = totalSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}h ${String(minutes).padStart(2, '0')}m ${String(seconds).padStart(2, '0')}s`
+  }
+
+  return `${minutes}m ${String(seconds).padStart(2, '0')}s`
+}
+
 const rankTitle = (xp: number) => {
   if (xp >= 1000) return 'ELITE'
   if (xp >= 500) return 'SPECIALIST'
@@ -83,6 +132,11 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
   const [lastClaimedXp, setLastClaimedXp] = useState(0)
   const [rewardBusy, setRewardBusy] = useState(false)
   const [rewardError, setRewardError] = useState('')
+  const [timedClaims, setTimedClaims] = useState<Record<string, number>>({})
+  const [claimingTimedReward, setClaimingTimedReward] = useState<TimedRewardId | null>(null)
+  const [timedRewardMessage, setTimedRewardMessage] = useState('')
+  const [timedRewardError, setTimedRewardError] = useState('')
+  const [clockNow, setClockNow] = useState(Date.now())
 
   useEffect(() => {
     const leaderboardQuery = query(
@@ -111,6 +165,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
       setCurrentXp(0)
       setRewardCode('')
       setLastClaimedXp(0)
+      setTimedClaims({})
       return
     }
 
@@ -124,8 +179,72 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
             ? 200
             : 0,
       )
+
+      const claims =
+        data?.timedRewardClaims && typeof data.timedRewardClaims === 'object'
+          ? data.timedRewardClaims as Record<string, unknown>
+          : {}
+
+      setTimedClaims(
+        Object.fromEntries(
+          Object.entries(claims).filter((entry): entry is [string, number] =>
+            typeof entry[1] === 'number',
+          ),
+        ),
+      )
     })
   }, [currentUid])
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(Date.now()), 1000)
+    return () => window.clearInterval(timer)
+  }, [])
+
+  const claimTimedReward = async (reward: TimedRewardDefinition) => {
+    if (!currentUid || claimingTimedReward) return
+
+    setClaimingTimedReward(reward.id)
+    setTimedRewardMessage('')
+    setTimedRewardError('')
+
+    try {
+      const claim = httpsCallable<
+        { rewardId: TimedRewardId },
+        {
+          ok: boolean
+          rewardId: TimedRewardId
+          label: string
+          points: number
+          xp: number
+          claimedAt: number
+          nextAvailableAt: number
+        }
+      >(functions, 'claimTimedReward')
+
+      const result = await claim({ rewardId: reward.id })
+
+      setTimedClaims((current) => ({
+        ...current,
+        [reward.id]: result.data.claimedAt,
+      }))
+      setCurrentXp(result.data.xp)
+      setTimedRewardMessage(
+        `${result.data.label} claimed: +${result.data.points} leaderboard XP.`,
+      )
+    } catch (claimError) {
+      const message =
+        typeof claimError === 'object' && claimError !== null && 'message' in claimError
+          ? String((claimError as { message?: unknown }).message || '')
+          : ''
+
+      setTimedRewardError(
+        message.replace(/^FirebaseError:\s*/i, '') ||
+          'The timed reward could not be claimed.',
+      )
+    } finally {
+      setClaimingTimedReward(null)
+    }
+  }
 
   const getQasReward = async () => {
     setRewardBusy(true)
@@ -215,6 +334,62 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
             <strong>#{currentRank}</strong>
             <small>{entries[currentRank - 1]?.xp ?? 0} XP</small>
           </div>
+        )}
+
+        {currentUid && (
+          <section className="timed-rewards">
+            <div className="timed-rewards-heading">
+              <div>
+                <span className="card-label">TIMED LEADERBOARD REWARDS</span>
+                <h2>Claim points as the timers reset.</h2>
+                <p>
+                  Timers are enforced by the DANJI server, so changing the clock on a
+                  device cannot bypass the cooldown.
+                </p>
+              </div>
+              <span className="timed-rewards-live">LIVE REWARDS</span>
+            </div>
+
+            <div className="timed-reward-grid">
+              {TIMED_REWARDS.map((reward) => {
+                const lastClaimedAt = timedClaims[reward.id] || 0
+                const nextAvailableAt = lastClaimedAt + reward.cooldownMs
+                const remaining = lastClaimedAt > 0 ? nextAvailableAt - clockNow : 0
+                const ready = remaining <= 0
+                const claiming = claimingTimedReward === reward.id
+
+                return (
+                  <article
+                    className={ready ? 'timed-reward-card ready' : 'timed-reward-card'}
+                    key={reward.id}
+                  >
+                    <div className="timed-reward-top">
+                      <span>{reward.label}</span>
+                      <strong>+{reward.points} XP</strong>
+                    </div>
+                    <p>{reward.description}</p>
+                    <div className="timed-reward-countdown">
+                      <small>{ready ? 'AVAILABLE NOW' : 'NEXT CLAIM'}</small>
+                      <b>{formatCountdown(remaining)}</b>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => void claimTimedReward(reward)}
+                      disabled={!ready || Boolean(claimingTimedReward)}
+                    >
+                      {claiming ? 'CLAIMING…' : ready ? 'CLAIM REWARD' : 'LOCKED'}
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
+
+            {(timedRewardMessage || timedRewardError) && (
+              <div className={timedRewardError ? 'timed-reward-feedback error' : 'timed-reward-feedback success'}>
+                {timedRewardError || timedRewardMessage}
+              </div>
+            )}
+          </section>
         )}
 
         {currentUid && (() => {
