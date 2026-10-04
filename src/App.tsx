@@ -6,9 +6,10 @@ import { auth, functions } from './firebase'
 import EthicalHacking from './EthicalHacking'
 import Leaderboard from './Leaderboard'
 import Recruitment from './Recruitment'
+import SeriaTracker from './SeriaTracker'
 import './App.css'
 
-type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
+type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'seria' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
 type TomoriEmotion =
   | 'neutral'
   | 'happy'
@@ -164,6 +165,13 @@ function App() {
             onClick={() => setActiveTab('leaderboard')}
           >
             Leaderboard
+          </button>
+          <button
+            className={activeTab === 'seria' ? 'tab active seria-nav-tab' : 'tab seria-nav-tab'}
+            type="button"
+            onClick={() => setActiveTab('seria')}
+          >
+            Seria
           </button>
           <button
             className={activeTab === 'minecraft' ? 'tab active' : 'tab'}
@@ -402,10 +410,12 @@ function App() {
           currentUid={user?.uid}
           onJoin={() => setActiveTab('recruitment')}
         />
+      ) : activeTab === 'seria' ? (
+        <SeriaTracker />
       ) : activeTab === 'minecraft' ? (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>05</span>
+            <span>06</span>
             MINECRAFT
           </div>
           <div className="placeholder-content">
@@ -419,7 +429,7 @@ function App() {
       ) : (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>{activeTab === 'briefing' ? '07' : '08'}</span>
+            <span>{activeTab === 'briefing' ? '08' : '09'}</span>
             {activeTab.toUpperCase()}
           </div>
           <div className="placeholder-content">
