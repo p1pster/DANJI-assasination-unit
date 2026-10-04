@@ -2410,7 +2410,7 @@ button.ethical-tool-card.active .ethical-tool-marker {
   min-height: 92px;
   padding: 18px 20px;
   display: grid;
-  grid-template-columns: 120px 130px 190px minmax(0, 1fr);
+  grid-template-columns: 120px 130px 170px 190px minmax(0, 1fr);
   align-items: center;
   gap: 18px;
   border: 1px solid rgba(255,255,255,.075);
