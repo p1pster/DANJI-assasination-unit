@@ -3075,3 +3075,30 @@ button.ethical-tool-card.active .ethical-tool-marker {
 .crossgame-next.complete {
   color: #7ea087;
 }
+
+
+/* Quill & Circle / QAS external link */
+.tabs .qas-link {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  text-decoration: none;
+  color: #b52a43;
+}
+
+.tabs .qas-link:hover {
+  color: #fff;
+  background: rgba(176,31,56,.09);
+}
+
+.tabs .qas-link span {
+  font-size: 12px;
+}
+
+.qas-hero-link {
+  text-decoration: none;
+}
+
+.qas-hero-link span {
+  margin-left: 8px;
+}
