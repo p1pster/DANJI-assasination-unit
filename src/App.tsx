@@ -12,9 +12,28 @@ import tomoriIcon from './assets/tomori.webp'
 import './App.css'
 
 type Tab = 'welcome' | 'assistant' | 'briefing' | 'archive'
+type TomoriEmotion =
+  | 'neutral'
+  | 'happy'
+  | 'excited'
+  | 'crying'
+  | 'shy'
+  | 'confused'
+  | 'angry'
+  | 'working'
+  | 'love'
+  | 'drink'
+  | 'sleepy'
+  | 'cool'
+  | 'shocked'
+  | 'thinking'
+  | 'food'
+  | 'cute'
+
 type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
+  emotion?: TomoriEmotion
 }
 
 const starterMessages: ChatMessage[] = [
@@ -22,6 +41,7 @@ const starterMessages: ChatMessage[] = [
     role: 'assistant',
     content:
       'Tomori online. Ask me a question, give me something to plan, or just talk to me.',
+    emotion: 'happy',
   },
 ]
 
@@ -64,7 +84,7 @@ function App() {
     try {
       const askDanji = httpsCallable<
         { messages: ChatMessage[] },
-        { reply: string }
+        { reply: string; emotion: TomoriEmotion }
       >(functions, 'danjiAssistant')
 
       const result = await askDanji({ messages: nextMessages.slice(-12) })
@@ -74,6 +94,7 @@ function App() {
         {
           role: 'assistant',
           content: result.data.reply || 'I could not produce a response.',
+          emotion: result.data.emotion || 'neutral',
         },
       ])
     } catch (error) {
@@ -264,14 +285,27 @@ function App() {
                     key={index}
                   >
                     <span>{message.role === 'user' ? 'YOU' : 'TOMORI'}</span>
-                    <p>{message.content}</p>
+                    {message.role === 'assistant' ? (
+                      <div className="tomori-response">
+                        <i
+                          className={`tomori-emote tomori-emote-${message.emotion || 'neutral'}`}
+                          aria-hidden="true"
+                        />
+                        <p>{message.content}</p>
+                      </div>
+                    ) : (
+                      <p>{message.content}</p>
+                    )}
                   </article>
                 ))}
 
                 {isThinking && (
                   <article className="message ai-message thinking-message">
                     <span>TOMORI</span>
-                    <p>Processing<span className="thinking-dots">...</span></p>
+                    <div className="tomori-response">
+                      <i className="tomori-emote tomori-emote-thinking" aria-hidden="true" />
+                      <p>Processing<span className="thinking-dots">...</span></p>
+                    </div>
                   </article>
                 )}
               </div>
@@ -363,14 +397,27 @@ function App() {
                       key={index}
                     >
                       <span>{message.role === 'user' ? 'YOU' : 'TOMORI'}</span>
-                      <p>{message.content}</p>
+                      {message.role === 'assistant' ? (
+                        <div className="tomori-response compact">
+                          <i
+                            className={`tomori-emote tomori-emote-${message.emotion || 'neutral'}`}
+                            aria-hidden="true"
+                          />
+                          <p>{message.content}</p>
+                        </div>
+                      ) : (
+                        <p>{message.content}</p>
+                      )}
                     </article>
                   ))}
 
                   {isThinking && (
                     <article className="floating-message ai-message">
                       <span>TOMORI</span>
-                      <p>Processing<span className="thinking-dots">...</span></p>
+                      <div className="tomori-response compact">
+                        <i className="tomori-emote tomori-emote-thinking" aria-hidden="true" />
+                        <p>Processing<span className="thinking-dots">...</span></p>
+                      </div>
                     </article>
                   )}
                 </div>
