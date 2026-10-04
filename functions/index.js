@@ -1,5 +1,5 @@
 const { initializeApp } = require("firebase-admin/app");
-const { getFirestore } = require("firebase-admin/firestore");
+const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
 const OpenAI = require("openai");
@@ -29,6 +29,101 @@ const TOMORI_EMOTIONS = new Set([
   "food",
   "cute",
 ]);
+
+function memberIdentity(auth) {
+  const token = (auth && auth.token) || {};
+  const fallbackName =
+    typeof token.email === "string" && token.email.includes("@")
+      ? token.email.split("@")[0]
+      : "DANJI Member";
+
+  return {
+    displayName:
+      typeof token.name === "string" && token.name.trim()
+        ? token.name.trim().slice(0, 60)
+        : fallbackName.slice(0, 60),
+    photoURL:
+      typeof token.picture === "string" && token.picture.startsWith("http")
+        ? token.picture.slice(0, 500)
+        : "",
+  };
+}
+
+async function ensureDanjiMember(auth) {
+  const ref = db.collection("danjiMembers").doc(auth.uid);
+  const identity = memberIdentity(auth);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+
+    if (!snapshot.exists) {
+      transaction.set(ref, {
+        uid: auth.uid,
+        ...identity,
+        xp: 100,
+        tomoriMessages: 0,
+        joinedAt: FieldValue.serverTimestamp(),
+        lastActive: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    transaction.update(ref, {
+      ...identity,
+      lastActive: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+async function awardTomoriXp(auth) {
+  const ref = db.collection("danjiMembers").doc(auth.uid);
+  const identity = memberIdentity(auth);
+
+  await db.runTransaction(async (transaction) => {
+    const snapshot = await transaction.get(ref);
+
+    if (!snapshot.exists) {
+      transaction.set(ref, {
+        uid: auth.uid,
+        ...identity,
+        xp: 105,
+        tomoriMessages: 1,
+        joinedAt: FieldValue.serverTimestamp(),
+        lastActive: FieldValue.serverTimestamp(),
+      });
+      return;
+    }
+
+    const data = snapshot.data() || {};
+    const xp = typeof data.xp === "number" ? data.xp : 100;
+    const tomoriMessages =
+      typeof data.tomoriMessages === "number" ? data.tomoriMessages : 0;
+
+    transaction.update(ref, {
+      ...identity,
+      xp: xp + 5,
+      tomoriMessages: tomoriMessages + 1,
+      lastActive: FieldValue.serverTimestamp(),
+    });
+  });
+}
+
+exports.registerDanjiMember = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in to become a DANJI member.");
+    }
+
+    await ensureDanjiMember(request.auth);
+    return { ok: true };
+  },
+);
 
 async function enforceRateLimit(uid) {
   const ref = db.collection("_danjiAiLimits").doc(uid);
@@ -136,8 +231,8 @@ exports.danjiAssistant = onCall(
       let emotion = "neutral";
 
       const cleaned = raw
-        .replace(/^\`\`\`(?:json)?\\s*/i, "")
-        .replace(/\\s*\`\`\`$/i, "")
+        .replace(/^```(?:json)?\s*/i, "")
+        .replace(/\s*```$/i, "")
         .trim();
 
       try {
@@ -152,7 +247,7 @@ exports.danjiAssistant = onCall(
         // Some models may append the emotion object after a normal reply.
         // Pull that metadata out so users never see raw JSON in Tomori's message.
         const emotionObjectMatch = cleaned.match(
-          /\\{\\s*"emotion"\\s*:\\s*"([^"]+)"\\s*\\}\\s*$/,
+          /\{\s*"emotion"\s*:\s*"([^"]+)"\s*\}\s*$/,
         );
 
         if (emotionObjectMatch) {
@@ -172,6 +267,12 @@ exports.danjiAssistant = onCall(
         } else {
           reply = cleaned;
         }
+      }
+
+      try {
+        await awardTomoriXp(request.auth);
+      } catch (leaderboardError) {
+        console.error("DANJI leaderboard XP update failed", leaderboardError);
       }
 
       return { reply, emotion };
