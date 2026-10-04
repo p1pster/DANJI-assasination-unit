@@ -11,6 +11,24 @@ const openAiKey = defineSecret("OPENAI_API_KEY");
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS_PER_HOUR = 40;
+const TOMORI_EMOTIONS = new Set([
+  "neutral",
+  "happy",
+  "excited",
+  "crying",
+  "shy",
+  "confused",
+  "angry",
+  "working",
+  "love",
+  "drink",
+  "sleepy",
+  "cool",
+  "shocked",
+  "thinking",
+  "food",
+  "cute",
+]);
 
 async function enforceRateLimit(uid) {
   const ref = db.collection("_danjiAiLimits").doc(uid);
@@ -48,7 +66,7 @@ exports.danjiAssistant = onCall(
   },
   async (request) => {
     if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign in to use DANJI AI.");
+      throw new HttpsError("unauthenticated", "Sign in to talk to Tomori.");
     }
 
     const rawMessages = request.data && request.data.messages;
@@ -88,18 +106,33 @@ exports.danjiAssistant = onCall(
       const response = await client.responses.create({
         model: "gpt-6-luna",
         instructions:
-          "You are DANJI AI, the built-in assistant for the DANJI web system. Be concise, capable, calm and practical. Help with questions, planning, writing, research explanations and navigating DANJI. Never pretend you completed an action you did not actually perform.",
+          'You are Tomori, the built-in AI assistant for the DANJI web system. Be concise, capable, calm, expressive and practical. Help with questions, planning, writing, explanations and navigating DANJI. Never pretend you completed an action you did not actually perform. For every response, choose exactly one reaction from: neutral, happy, excited, crying, shy, confused, angry, working, love, drink, sleepy, cool, shocked, thinking, food, cute. Pick the reaction that best matches your emotional tone or what you are doing: use working for active task/help, thinking for analysis, confused for genuine uncertainty, angry only when the tone really fits, sleepy for sleep/tired topics, food or drink when those are central, love or cute for affectionate/cute moments, cool for confident success, shocked for surprising information, crying for sadness, shy for bashful moments, excited for strong enthusiasm, happy for ordinary positive replies, and neutral otherwise. Return ONLY valid JSON with exactly this shape and no markdown: {"reply":"your response","emotion":"one_allowed_reaction"}.',
         input: messages,
-        max_output_tokens: 800,
+        max_output_tokens: 900,
       });
 
-      const reply = response.output_text && response.output_text.trim();
+      const raw = response.output_text && response.output_text.trim();
 
-      if (!reply) {
+      if (!raw) {
         throw new Error("Empty model response");
       }
 
-      return { reply };
+      let reply = raw;
+      let emotion = "neutral";
+
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) {
+          reply = parsed.reply.trim();
+        }
+        if (parsed && TOMORI_EMOTIONS.has(parsed.emotion)) {
+          emotion = parsed.emotion;
+        }
+      } catch {
+        // Keep the raw reply and fall back to a neutral Tomori reaction.
+      }
+
+      return { reply, emotion };
     } catch (error) {
       console.error("DANJI AI error", error);
       throw new HttpsError("internal", "DANJI AI is temporarily unavailable.");
