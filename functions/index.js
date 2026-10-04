@@ -280,6 +280,111 @@ exports.awardLinkedProvider = onCall(
   },
 );
 
+const TIMED_REWARDS = {
+  hourly: {
+    label: "Hourly Signal",
+    points: 10,
+    cooldownMs: 60 * 60 * 1000,
+  },
+  sixHour: {
+    label: "Operations Cache",
+    points: 75,
+    cooldownMs: 6 * 60 * 60 * 1000,
+  },
+  daily: {
+    label: "Daily Command Drop",
+    points: 250,
+    cooldownMs: 24 * 60 * 60 * 1000,
+  },
+};
+
+exports.claimTimedReward = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 5,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in to claim DANJI timed rewards.",
+      );
+    }
+
+    const rewardId =
+      request.data && typeof request.data.rewardId === "string"
+        ? request.data.rewardId
+        : "";
+
+    const reward = TIMED_REWARDS[rewardId];
+
+    if (!reward) {
+      throw new HttpsError("invalid-argument", "Unknown timed reward.");
+    }
+
+    await ensureDanjiMember(request.auth);
+
+    const memberRef = db.collection("danjiMembers").doc(request.auth.uid);
+    const now = Date.now();
+    let nextAvailableAt = now + reward.cooldownMs;
+    let xp = 0;
+
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(memberRef);
+
+      if (!snapshot.exists) {
+        throw new HttpsError("not-found", "DANJI member record not found.");
+      }
+
+      const data = snapshot.data() || {};
+      const claims =
+        data.timedRewardClaims && typeof data.timedRewardClaims === "object"
+          ? data.timedRewardClaims
+          : {};
+      const lastClaimedAt =
+        typeof claims[rewardId] === "number" ? claims[rewardId] : 0;
+
+      nextAvailableAt = lastClaimedAt + reward.cooldownMs;
+
+      if (lastClaimedAt > 0 && now < nextAvailableAt) {
+        throw new HttpsError(
+          "failed-precondition",
+          reward.label + " is not ready yet.",
+          {
+            rewardId,
+            nextAvailableAt,
+            remainingMs: nextAvailableAt - now,
+          },
+        );
+      }
+
+      const currentXp = typeof data.xp === "number" ? data.xp : 0;
+      xp = currentXp + reward.points;
+      nextAvailableAt = now + reward.cooldownMs;
+
+      transaction.update(memberRef, {
+        xp,
+        ["timedRewardClaims." + rewardId]: now,
+        ["timedRewardClaimCounts." + rewardId]: FieldValue.increment(1),
+        timedRewardLastClaimedAt: now,
+        lastActive: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return {
+      ok: true,
+      rewardId,
+      label: reward.label,
+      points: reward.points,
+      xp,
+      claimedAt: now,
+      nextAvailableAt,
+    };
+  },
+);
+
 exports.seriaA380 = onRequest(
   {
     region: "europe-west2",
