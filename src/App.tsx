@@ -11,7 +11,7 @@ import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
 import './App.css'
 
-type Tab = 'welcome' | 'assistant' | 'briefing' | 'archive'
+type Tab = 'welcome' | 'assistant' | 'recruitment' | 'briefing' | 'archive'
 type TomoriEmotion =
   | 'neutral'
   | 'happy'
@@ -99,7 +99,7 @@ function App() {
 
     if (!text || isThinking) return
     if (!user) {
-      setAssistantError('Sign in before talking to Tomori.')
+      setAssistantError('Become a DANJI member before talking to Tomori.')
       return
     }
 
@@ -163,6 +163,13 @@ function App() {
             onClick={() => setActiveTab('assistant')}
           >
             Tomori
+          </button>
+          <button
+            className={activeTab === 'recruitment' ? 'tab active' : 'tab'}
+            type="button"
+            onClick={() => setActiveTab('recruitment')}
+          >
+            Recruitment
           </button>
           <button
             className={activeTab === 'briefing' ? 'tab active' : 'tab'}
@@ -276,14 +283,14 @@ function App() {
               <div className="assistant-user">
                 {user ? (
                   <>
-                    <span>{user.displayName || user.email || 'SIGNED IN'}</span>
-                    <button type="button" onClick={() => signOut(auth)}>
-                      SIGN OUT
+                    <span>{user.displayName || user.email || 'DANJI MEMBER'}</span>
+                    <button type="button" onClick={() => setActiveTab('recruitment')}>
+                      MEMBER STATUS
                     </button>
                   </>
                 ) : (
-                  <button type="button" onClick={handleGoogleSignIn}>
-                    SIGN IN WITH GOOGLE
+                  <button type="button" onClick={() => setActiveTab('recruitment')}>
+                    BECOME DANJI MEMBER
                   </button>
                 )}
               </div>
@@ -362,10 +369,99 @@ function App() {
             </div>
           </div>
         </section>
+      ) : activeTab === 'recruitment' ? (
+        <section className="recruitment-page">
+          <div className="recruitment-wrap">
+            <div className="eyebrow">
+              <span>03</span>
+              RECRUITMENT
+            </div>
+
+            <div className="recruitment-hero">
+              <p className="kicker">DANJI // MEMBER ACCESS</p>
+              <h1>Join DANJI.</h1>
+              <p>
+                Become a DANJI member to unlock Tomori and future member-only
+                systems as they come online.
+              </p>
+            </div>
+
+            <div className="recruitment-grid">
+              <article className="recruitment-card recruitment-card-main">
+                <span className="card-label">MEMBERSHIP STATUS</span>
+                {user ? (
+                  <>
+                    <div className="member-status-line">
+                      <span className="status-dot" />
+                      ACTIVE MEMBER
+                    </div>
+                    <h2>{user.displayName || 'DANJI Member'}</h2>
+                    <p>{user.email || 'Google account connected'}</p>
+                    <div className="recruitment-actions">
+                      <button
+                        className="recruitment-primary"
+                        type="button"
+                        onClick={() => setActiveTab('assistant')}
+                      >
+                        TALK TO TOMORI
+                        <span>↗</span>
+                      </button>
+                      <button
+                        className="recruitment-secondary"
+                        type="button"
+                        onClick={() => signOut(auth)}
+                      >
+                        SIGN OUT
+                      </button>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="member-status-line muted">
+                      <span className="status-dot idle" />
+                      NOT A MEMBER
+                    </div>
+                    <h2>Become a DANJI member.</h2>
+                    <p>
+                      Sign in with Google to create or access your DANJI membership.
+                      Your Firebase account is used to identify you securely.
+                    </p>
+                    <button
+                      className="recruitment-primary google-login"
+                      type="button"
+                      onClick={handleGoogleSignIn}
+                    >
+                      <span className="google-mark">G</span>
+                      SIGN IN WITH GOOGLE
+                      <span>↗</span>
+                    </button>
+                  </>
+                )}
+
+                {assistantError && (
+                  <div className="recruitment-error">{assistantError}</div>
+                )}
+              </article>
+
+              <aside className="recruitment-card recruitment-info">
+                <span className="card-label">MEMBER ACCESS</span>
+                <strong>TOMORI // ENABLED</strong>
+                <p>
+                  Membership gives you authenticated access to Tomori. More DANJI
+                  member systems can be added here later.
+                </p>
+                <div className="recruitment-rule" />
+                <span className="recruitment-note">
+                  ONE DANJI ID // GOOGLE AUTHENTICATION
+                </span>
+              </aside>
+            </div>
+          </div>
+        </section>
       ) : (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>{activeTab === 'briefing' ? '03' : '04'}</span>
+            <span>{activeTab === 'briefing' ? '04' : '05'}</span>
             {activeTab.toUpperCase()}
           </div>
           <div className="placeholder-content">
@@ -411,9 +507,15 @@ function App() {
             {!user ? (
               <div className="floating-ai-signin">
                 <span className="status-dot idle" />
-                <p>Sign in to talk to Tomori.</p>
-                <button type="button" onClick={handleGoogleSignIn}>
-                  SIGN IN WITH GOOGLE
+                <p>Tomori is available to DANJI members.</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('recruitment')
+                    setFloatingAssistantOpen(false)
+                  }}
+                >
+                  BECOME DANJI MEMBER
                 </button>
               </div>
             ) : (
