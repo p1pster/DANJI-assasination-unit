@@ -193,6 +193,15 @@ function App() {
           >
             Archive
           </button>
+          <a
+            className="tab qas-link"
+            href="https://quill-and-circle.web.app"
+            target="_blank"
+            rel="noreferrer"
+            aria-label="Open Quill and Circle"
+          >
+            QAS <span aria-hidden="true">↗</span>
+          </a>
         </nav>
 
         <div className="status-pill">
@@ -229,9 +238,15 @@ function App() {
                 OPEN TOMORI
                 <span aria-hidden="true">↗</span>
               </button>
-              <button className="secondary-action" type="button">
-                VIEW STATUS
-              </button>
+              <a
+                className="secondary-action qas-hero-link"
+                href="https://quill-and-circle.web.app"
+                target="_blank"
+                rel="noreferrer"
+              >
+                OPEN QAS
+                <span aria-hidden="true">↗</span>
+              </a>
             </div>
           </div>
 
