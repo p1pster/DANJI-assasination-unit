@@ -1434,3 +1434,37 @@ button {
     width: 100%;
   }
 }
+
+
+/* Keep the expanded DANJI navigation usable with seven modules */
+@media (max-width: 1500px) and (min-width: 821px) {
+  .topbar {
+    padding-inline: 22px;
+  }
+
+  .tab {
+    padding-inline: 14px;
+    font-size: 10px;
+    letter-spacing: .13em;
+  }
+}
+
+@media (max-width: 1120px) and (min-width: 821px) {
+  .topbar {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .tabs {
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    flex: 0 0 auto;
+  }
+}
