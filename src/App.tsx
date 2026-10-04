@@ -11,7 +11,7 @@ import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
 import './App.css'
 
-type Tab = 'welcome' | 'assistant' | 'recruitment' | 'briefing' | 'archive'
+type Tab = 'welcome' | 'assistant' | 'recruitment' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
 type TomoriEmotion =
   | 'neutral'
   | 'happy'
@@ -184,6 +184,20 @@ function App() {
             onClick={() => setActiveTab('recruitment')}
           >
             Recruitment
+          </button>
+          <button
+            className={activeTab === 'minecraft' ? 'tab active' : 'tab'}
+            type="button"
+            onClick={() => setActiveTab('minecraft')}
+          >
+            Minecraft
+          </button>
+          <button
+            className={activeTab === 'ethical' ? 'tab active' : 'tab'}
+            type="button"
+            onClick={() => setActiveTab('ethical')}
+          >
+            Ethical Hacking
           </button>
           <button
             className={activeTab === 'briefing' ? 'tab active' : 'tab'}
@@ -472,10 +486,34 @@ function App() {
             </div>
           </div>
         </section>
+      ) : activeTab === 'minecraft' ? (
+        <section className="placeholder-page">
+          <div className="eyebrow">
+            <span>04</span>
+            MINECRAFT
+          </div>
+          <div className="placeholder-content">
+            <p>GAME NODE // READY</p>
+            <h1>Minecraft</h1>
+            <span>Servers, builds, tools, maps and DANJI Minecraft projects will live here.</span>
+          </div>
+        </section>
+      ) : activeTab === 'ethical' ? (
+        <section className="placeholder-page">
+          <div className="eyebrow">
+            <span>05</span>
+            ETHICAL HACKING
+          </div>
+          <div className="placeholder-content">
+            <p>SECURITY LAB // READY</p>
+            <h1>Ethical Hacking</h1>
+            <span>Authorised security labs, learning tools, notes and defensive testing will live here.</span>
+          </div>
+        </section>
       ) : (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>{activeTab === 'briefing' ? '04' : '05'}</span>
+            <span>{activeTab === 'briefing' ? '06' : '07'}</span>
             {activeTab.toUpperCase()}
           </div>
           <div className="placeholder-content">
