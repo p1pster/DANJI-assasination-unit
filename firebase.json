@@ -9,6 +9,7 @@
     "indexes": "firestore.indexes.json"
   },
   "hosting": {
+    "target": "danji",
     "public": "dist",
     "ignore": [
       "firebase.json",
