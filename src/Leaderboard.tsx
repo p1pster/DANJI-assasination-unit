@@ -212,10 +212,14 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                 <small>JOIN DANJI</small>
               </div>
               <div>
+                <strong>+25</strong>
+                <small>NEW LINKED SIGN-IN</small>
+              </div>
+              <div>
                 <strong>+5</strong>
                 <small>SUCCESSFUL TOMORI REPLY</small>
               </div>
-              <p>Future modules can add more verified XP sources without allowing members to edit their own score.</p>
+              <p>Provider-link bonuses are awarded once per supported sign-in method and verified by the server.</p>
             </div>
           </>
         )}
