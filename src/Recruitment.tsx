@@ -203,7 +203,7 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
       } else {
         await signInWithPopup(auth, provider)
         await refreshLinkedProviders()
-        setStatus('Welcome to DANJI. First login bonus: +100 leaderboard XP.')
+        setStatus('Welcome to DANJI. +125 XP awarded: +100 first login and +25 signup bonus.')
       }
     } catch (providerError) {
       setError(cleanAuthError(providerError))
@@ -232,7 +232,7 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
       } else if (emailMode === 'signup') {
         await createUserWithEmailAndPassword(auth, email.trim(), password)
         await refreshLinkedProviders()
-        setStatus('DANJI membership created. First login bonus: +100 leaderboard XP.')
+        setStatus('DANJI membership created. +125 XP awarded: +100 first login and +25 signup bonus.')
       } else {
         await signInWithEmailAndPassword(auth, email.trim(), password)
         await refreshLinkedProviders()
@@ -300,7 +300,7 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
       if (phoneLinkingRef.current) {
         await awardProvider('phone')
       } else {
-        setStatus('Phone verified. First DANJI login bonus: +100 leaderboard XP.')
+        setStatus('Phone verified. +125 XP awarded: +100 first login and +25 signup bonus.')
       }
 
       setSmsCode('')
@@ -350,15 +350,15 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
             <p className="kicker">DANJI // MEMBER ACCESS</p>
             <h1>{user ? 'Your DANJI ID.' : 'Join DANJI.'}</h1>
             <p>
-              First login earns <strong>100 leaderboard XP</strong>. Once you are a
-              member, link additional sign-in methods to the same DANJI profile for
-              <strong> +25 XP each</strong>.
+              First login earns <strong>100 leaderboard XP</strong>, signing up adds
+              <strong> +25 XP</strong>, and each new sign-in method linked to the same
+              DANJI profile earns another <strong>+25 XP</strong>.
             </p>
           </div>
 
           <div className="recruitment-score-rules">
             <div><strong>+100</strong><span>FIRST LOGIN</span></div>
-            <div><strong>+25</strong><span>NEW LINKED ACCOUNT</span></div>
+            <div><strong>+25</strong><span>SIGN UP / LINK ACCOUNT</span></div>
           </div>
         </div>
 
