@@ -135,8 +135,13 @@ exports.danjiAssistant = onCall(
       let reply = raw;
       let emotion = "neutral";
 
+      const cleaned = raw
+        .replace(/^\`\`\`(?:json)?\\s*/i, "")
+        .replace(/\\s*\`\`\`$/i, "")
+        .trim();
+
       try {
-        const parsed = JSON.parse(raw);
+        const parsed = JSON.parse(cleaned);
         if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) {
           reply = parsed.reply.trim();
         }
@@ -144,7 +149,29 @@ exports.danjiAssistant = onCall(
           emotion = parsed.emotion;
         }
       } catch {
-        // Keep the raw reply and fall back to a neutral Tomori reaction.
+        // Some models may append the emotion object after a normal reply.
+        // Pull that metadata out so users never see raw JSON in Tomori's message.
+        const emotionObjectMatch = cleaned.match(
+          /\\{\\s*"emotion"\\s*:\\s*"([^"]+)"\\s*\\}\\s*$/,
+        );
+
+        if (emotionObjectMatch) {
+          const candidateEmotion = emotionObjectMatch[1];
+
+          if (TOMORI_EMOTIONS.has(candidateEmotion)) {
+            emotion = candidateEmotion;
+          }
+
+          const withoutMetadata = cleaned
+            .slice(0, emotionObjectMatch.index)
+            .trim();
+
+          if (withoutMetadata) {
+            reply = withoutMetadata;
+          }
+        } else {
+          reply = cleaned;
+        }
       }
 
       return { reply, emotion };
