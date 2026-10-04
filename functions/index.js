@@ -134,8 +134,55 @@ exports.danjiAssistant = onCall(
 
       return { reply, emotion };
     } catch (error) {
-      console.error("DANJI AI error", error);
-      throw new HttpsError("internal", "DANJI AI is temporarily unavailable.");
+      console.error("Tomori OpenAI error", {
+        status: error && error.status,
+        code: error && error.code,
+        type: error && error.type,
+        message: error && error.message,
+        requestId: error && error.request_id,
+      });
+
+      const status = error && error.status;
+      const apiCode = error && error.code;
+
+      if (status === 401) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Tomori's OpenAI API key was rejected. Create a valid API key and update OPENAI_API_KEY in Firebase.",
+        );
+      }
+
+      if (status === 403) {
+        throw new HttpsError(
+          "permission-denied",
+          "This OpenAI API project does not currently have access to the selected Tomori model.",
+        );
+      }
+
+      if (status === 404) {
+        throw new HttpsError(
+          "failed-precondition",
+          "Tomori's selected AI model is not available to this OpenAI API project.",
+        );
+      }
+
+      if (status === 429) {
+        const quotaMessage =
+          apiCode === "credit_balance_exhausted" ||
+          apiCode === "organization_usage_limit_exceeded" ||
+          apiCode === "organization_spend_limit_exceeded" ||
+          apiCode === "project_spend_limit_exceeded" ||
+          (error && error.type === "insufficient_quota")
+            ? "Tomori's OpenAI API account has no available credit or has reached a spending limit. Check API billing and credits."
+            : "Tomori is being rate-limited by the OpenAI API. Try again shortly.";
+
+        throw new HttpsError("resource-exhausted", quotaMessage);
+      }
+
+      throw new HttpsError(
+        "internal",
+        "Tomori reached the AI service but received an unexpected error. Check the Firebase function logs for danjiAssistant.",
+      );
     }
   },
 );
