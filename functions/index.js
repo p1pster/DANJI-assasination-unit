@@ -2,7 +2,8 @@ const { initializeApp } = require("firebase-admin/app");
 const { getAuth: getAdminAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { defineSecret } = require("firebase-functions/params");
-const { HttpsError, onCall } = require("firebase-functions/v2/https");
+const { HttpsError, onCall, onRequest } = require("firebase-functions/v2/https");
+const { createHash, randomBytes } = require("node:crypto");
 const OpenAI = require("openai");
 
 initializeApp();
@@ -276,6 +277,219 @@ exports.awardLinkedProvider = onCall(
     });
 
     return { awarded, points: awarded ? 25 : 0, xp };
+  },
+);
+
+const QAS_200_REWARD = {
+  threshold: 200,
+  itemId: "danji_operator_hat",
+  itemName: "DANJI Operator Hat",
+};
+
+function qasRewardHash(code) {
+  return createHash("sha256").update(code).digest("hex");
+}
+
+exports.getQasRewardCode = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in to claim the Quill & Circle reward.");
+    }
+
+    await ensureDanjiMember(request.auth);
+
+    const memberRef = db.collection("danjiMembers").doc(request.auth.uid);
+    const initialMember = await memberRef.get();
+    const initialData = initialMember.data() || {};
+    const xp = typeof initialData.xp === "number" ? initialData.xp : 0;
+
+    if (xp < QAS_200_REWARD.threshold) {
+      throw new HttpsError(
+        "failed-precondition",
+        `Reach ${QAS_200_REWARD.threshold} DANJI XP to unlock this Quill & Circle item.`,
+      );
+    }
+
+    const existingClaimId =
+      typeof initialData.qas200RewardClaimId === "string"
+        ? initialData.qas200RewardClaimId
+        : "";
+
+    if (existingClaimId) {
+      const existingClaim = await db.collection("_qasRewardClaims").doc(existingClaimId).get();
+      if (existingClaim.exists) {
+        const claim = existingClaim.data() || {};
+        return {
+          unlocked: true,
+          redeemed: Boolean(claim.redeemedByQasUid),
+          code: claim.redeemedByQasUid ? null : claim.code,
+          itemId: QAS_200_REWARD.itemId,
+          itemName: QAS_200_REWARD.itemName,
+        };
+      }
+    }
+
+    const code = `DANJI-QC-${randomBytes(16).toString("hex").toUpperCase()}`;
+    const claimId = qasRewardHash(code);
+    const claimRef = db.collection("_qasRewardClaims").doc(claimId);
+
+    await db.runTransaction(async (transaction) => {
+      const memberSnap = await transaction.get(memberRef);
+      const memberData = memberSnap.data() || {};
+      const memberXp = typeof memberData.xp === "number" ? memberData.xp : 0;
+
+      if (memberXp < QAS_200_REWARD.threshold) {
+        throw new HttpsError(
+          "failed-precondition",
+          `Reach ${QAS_200_REWARD.threshold} DANJI XP to unlock this Quill & Circle item.`,
+        );
+      }
+
+      if (
+        typeof memberData.qas200RewardClaimId === "string" &&
+        memberData.qas200RewardClaimId
+      ) {
+        return;
+      }
+
+      transaction.set(claimRef, {
+        code,
+        danjiUid: request.auth.uid,
+        threshold: QAS_200_REWARD.threshold,
+        itemId: QAS_200_REWARD.itemId,
+        itemName: QAS_200_REWARD.itemName,
+        createdAt: FieldValue.serverTimestamp(),
+        redeemedByQasUid: null,
+        redeemedAt: null,
+      });
+
+      transaction.update(memberRef, {
+        qas200RewardClaimId: claimId,
+        qas200Unlocked: true,
+      });
+    });
+
+    const refreshed = await memberRef.get();
+    const refreshedClaimId =
+      typeof refreshed.data()?.qas200RewardClaimId === "string"
+        ? refreshed.data().qas200RewardClaimId
+        : claimId;
+    const finalClaim = await db.collection("_qasRewardClaims").doc(refreshedClaimId).get();
+    const finalData = finalClaim.data() || {};
+
+    return {
+      unlocked: true,
+      redeemed: Boolean(finalData.redeemedByQasUid),
+      code: finalData.redeemedByQasUid ? null : finalData.code,
+      itemId: QAS_200_REWARD.itemId,
+      itemName: QAS_200_REWARD.itemName,
+    };
+  },
+);
+
+exports.consumeQasReward = onRequest(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 5,
+    cors: false,
+  },
+  async (req, res) => {
+    res.set("Cache-Control", "no-store");
+
+    if (req.method !== "POST") {
+      res.status(405).json({ ok: false, error: "method_not_allowed" });
+      return;
+    }
+
+    const code =
+      req.body && typeof req.body.code === "string"
+        ? req.body.code.trim().toUpperCase()
+        : "";
+    const qasUid =
+      req.body && typeof req.body.qasUid === "string"
+        ? req.body.qasUid.trim().slice(0, 128)
+        : "";
+
+    if (!/^DANJI-QC-[A-F0-9]{32}$/.test(code) || !qasUid) {
+      res.status(400).json({ ok: false, error: "invalid_claim" });
+      return;
+    }
+
+    const claimId = qasRewardHash(code);
+    const claimRef = db.collection("_qasRewardClaims").doc(claimId);
+    let outcome = "invalid";
+
+    try {
+      await db.runTransaction(async (transaction) => {
+        const claimSnap = await transaction.get(claimRef);
+
+        if (!claimSnap.exists) {
+          outcome = "invalid";
+          return;
+        }
+
+        const claim = claimSnap.data() || {};
+
+        if (
+          claim.itemId !== QAS_200_REWARD.itemId ||
+          Number(claim.threshold) !== QAS_200_REWARD.threshold
+        ) {
+          outcome = "invalid";
+          return;
+        }
+
+        if (claim.redeemedByQasUid) {
+          outcome = claim.redeemedByQasUid === qasUid ? "already_same_user" : "already_used";
+          return;
+        }
+
+        outcome = "redeemed";
+        transaction.update(claimRef, {
+          redeemedByQasUid: qasUid,
+          redeemedAt: FieldValue.serverTimestamp(),
+        });
+
+        if (typeof claim.danjiUid === "string" && claim.danjiUid) {
+          transaction.set(
+            db.collection("danjiMembers").doc(claim.danjiUid),
+            {
+              qas200Claimed: true,
+              qas200ClaimedAt: FieldValue.serverTimestamp(),
+            },
+            { merge: true },
+          );
+        }
+      });
+    } catch (error) {
+      console.error("DANJI QAS reward redemption failed", error);
+      res.status(500).json({ ok: false, error: "redemption_failed" });
+      return;
+    }
+
+    if (outcome === "invalid") {
+      res.status(404).json({ ok: false, error: "invalid_claim" });
+      return;
+    }
+
+    if (outcome === "already_used") {
+      res.status(409).json({ ok: false, error: "already_redeemed" });
+      return;
+    }
+
+    res.status(200).json({
+      ok: true,
+      alreadyRedeemed: outcome === "already_same_user",
+      itemId: QAS_200_REWARD.itemId,
+      itemName: QAS_200_REWARD.itemName,
+    });
   },
 );
 
