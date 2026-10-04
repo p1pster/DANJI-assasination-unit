@@ -69,8 +69,9 @@ async function ensureDanjiMember(auth) {
       transaction.set(ref, {
         uid: auth.uid,
         ...identity,
-        xp: 100,
+        xp: 125,
         tomoriMessages: 0,
+        signupBonusAwarded: true,
         rewardedProviders: currentProvider ? [currentProvider] : [],
         joinedAt: FieldValue.serverTimestamp(),
         lastActive: FieldValue.serverTimestamp(),
@@ -88,8 +89,13 @@ async function ensureDanjiMember(auth) {
         ? [currentProvider]
         : existingRewarded;
 
+    const signupBonusAwarded = data.signupBonusAwarded === true;
+    const currentXp = typeof data.xp === "number" ? data.xp : 100;
+
     transaction.update(ref, {
       ...identity,
+      xp: signupBonusAwarded ? currentXp : currentXp + 25,
+      signupBonusAwarded: true,
       rewardedProviders,
       lastActive: FieldValue.serverTimestamp(),
     });
@@ -107,8 +113,10 @@ async function awardTomoriXp(auth) {
       transaction.set(ref, {
         uid: auth.uid,
         ...identity,
-        xp: 105,
+        xp: 130,
         tomoriMessages: 1,
+        signupBonusAwarded: true,
+        rewardedProviders: signInProvider(auth) ? [signInProvider(auth)] : [],
         joinedAt: FieldValue.serverTimestamp(),
         lastActive: FieldValue.serverTimestamp(),
       });
@@ -116,13 +124,16 @@ async function awardTomoriXp(auth) {
     }
 
     const data = snapshot.data() || {};
-    const xp = typeof data.xp === "number" ? data.xp : 100;
+    const baseXp = typeof data.xp === "number" ? data.xp : 100;
+    const signupBonusAwarded = data.signupBonusAwarded === true;
+    const xp = signupBonusAwarded ? baseXp : baseXp + 25;
     const tomoriMessages =
       typeof data.tomoriMessages === "number" ? data.tomoriMessages : 0;
 
     transaction.update(ref, {
       ...identity,
       xp: xp + 5,
+      signupBonusAwarded: true,
       tomoriMessages: tomoriMessages + 1,
       lastActive: FieldValue.serverTimestamp(),
     });
@@ -210,27 +221,45 @@ exports.awardLinkedProvider = onCall(
       const identity = memberIdentity(request.auth);
 
       if (!snapshot.exists) {
+        const initialProvider = signInProvider(request.auth);
+        const isAdditionalProvider =
+          initialProvider && initialProvider !== providerId;
+        const rewardedProviders = Array.from(
+          new Set([initialProvider, providerId].filter(Boolean)),
+        );
+
+        xp = isAdditionalProvider ? 150 : 125;
+        awarded = isAdditionalProvider;
+
         transaction.set(ref, {
           uid: request.auth.uid,
           ...identity,
-          xp: 100,
+          xp,
           tomoriMessages: 0,
-          rewardedProviders: [providerId],
+          signupBonusAwarded: true,
+          rewardedProviders,
           joinedAt: FieldValue.serverTimestamp(),
           lastActive: FieldValue.serverTimestamp(),
         });
-        xp = 100;
         return;
       }
 
       const data = snapshot.data() || {};
-      const currentXp = typeof data.xp === "number" ? data.xp : 100;
+      const storedXp = typeof data.xp === "number" ? data.xp : 100;
+      const signupBonusAwarded = data.signupBonusAwarded === true;
+      const currentXp = signupBonusAwarded ? storedXp : storedXp + 25;
       const rewardedProviders = Array.isArray(data.rewardedProviders)
         ? data.rewardedProviders.filter((value) => typeof value === "string")
         : [];
 
       if (rewardedProviders.includes(providerId)) {
         xp = currentXp;
+        transaction.update(ref, {
+          ...identity,
+          xp,
+          signupBonusAwarded: true,
+          lastActive: FieldValue.serverTimestamp(),
+        });
         return;
       }
 
@@ -240,6 +269,7 @@ exports.awardLinkedProvider = onCall(
       transaction.update(ref, {
         ...identity,
         xp,
+        signupBonusAwarded: true,
         rewardedProviders: [...rewardedProviders, providerId],
         lastActive: FieldValue.serverTimestamp(),
       });
