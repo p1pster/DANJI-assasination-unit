@@ -280,6 +280,56 @@ exports.awardLinkedProvider = onCall(
   },
 );
 
+exports.seriaA380 = onRequest(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 10,
+    memory: "128MiB",
+    maxInstances: 6,
+    cors: false,
+  },
+  async (req, res) => {
+    if (req.method !== "GET") {
+      res.status(405).json({ error: "Method not allowed" });
+      return;
+    }
+
+    try {
+      const upstream = await fetch("https://api.adsb.lol/v2/type/A388", {
+        headers: {
+          accept: "application/json",
+          "user-agent": "DANJI-Seria/1.0",
+        },
+      });
+      const raw = await upstream.text();
+
+      if (!upstream.ok) {
+        res.status(502).json({
+          error: "A380 feed unavailable",
+          status: upstream.status,
+        });
+        return;
+      }
+
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch {
+        res.status(502).json({ error: "A380 feed returned invalid JSON" });
+        return;
+      }
+
+      res.set("Cache-Control", "public, max-age=10, s-maxage=10");
+      res.status(200).json(data);
+    } catch (error) {
+      res.status(502).json({
+        error: "A380 feed request failed",
+        detail: error instanceof Error ? error.message : String(error),
+      });
+    }
+  },
+);
+
 const QAS_REWARD_MIN_XP = 200;
 const QAS_REWARD_MAX_XP = 10_000_000_000;
 const QAS_WELLDONE_COUNT = 100;
