@@ -8,6 +8,7 @@ import {
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
+import tomoriIcon from './assets/tomori.webp'
 import './App.css'
 
 type Tab = 'welcome' | 'assistant' | 'briefing' | 'archive'
@@ -20,7 +21,7 @@ const starterMessages: ChatMessage[] = [
   {
     role: 'assistant',
     content:
-      'DANJI AI online. Ask me a question, give me something to plan, or use me as your built-in assistant.',
+      'Tomori online. Ask me a question, give me something to plan, or just talk to me.',
   },
 ]
 
@@ -161,7 +162,7 @@ function App() {
                 type="button"
                 onClick={() => setFloatingAssistantOpen(true)}
               >
-                OPEN DANJI AI
+                OPEN TOMORI
                 <span aria-hidden="true">↗</span>
               </button>
               <button className="secondary-action" type="button">
@@ -215,12 +216,12 @@ function App() {
           <div className="assistant-heading">
             <div className="eyebrow">
               <span>02</span>
-              DANJI AI
+              TOMORI
             </div>
             <div className="assistant-heading-row">
               <div>
                 <p className="kicker">INTELLIGENCE NODE // ACTIVE</p>
-                <h1>Assistant.</h1>
+                <h1>Tomori.</h1>
               </div>
 
               <div className="assistant-user">
@@ -242,8 +243,9 @@ function App() {
 
           <div className="assistant-console">
             <aside className="assistant-sidebar">
+              <img className="tomori-sidebar-avatar" src={tomoriIcon} alt="Tomori" />
               <span className="card-label">AI CORE</span>
-              <strong>DANJI // 01</strong>
+              <strong>TOMORI // 01</strong>
               <p>
                 The AI runs through a protected Firebase Function, so the API key
                 never lives in the website code.
@@ -261,14 +263,14 @@ function App() {
                     className={message.role === 'user' ? 'message user-message' : 'message ai-message'}
                     key={index}
                   >
-                    <span>{message.role === 'user' ? 'YOU' : 'DANJI AI'}</span>
+                    <span>{message.role === 'user' ? 'YOU' : 'TOMORI'}</span>
                     <p>{message.content}</p>
                   </article>
                 ))}
 
                 {isThinking && (
                   <article className="message ai-message thinking-message">
-                    <span>DANJI AI</span>
+                    <span>TOMORI</span>
                     <p>Processing<span className="thinking-dots">...</span></p>
                   </article>
                 )}
@@ -280,7 +282,7 @@ function App() {
                 <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder={user ? 'Message DANJI AI...' : 'Sign in to activate DANJI AI...'}
+                  placeholder={user ? 'Message DANJI AI...' : 'Sign in to talk to Tomori...'}
                   maxLength={4000}
                   disabled={!user || isThinking}
                   onKeyDown={(event) => {
@@ -314,11 +316,14 @@ function App() {
 
       <div className={floatingAssistantOpen ? 'floating-ai open' : 'floating-ai'}>
         {floatingAssistantOpen && (
-          <section className="floating-ai-panel" aria-label="DANJI AI assistant">
+          <section className="floating-ai-panel" aria-label="Tomori AI assistant">
             <header className="floating-ai-header">
-              <div>
-                <span className="floating-ai-kicker">DANJI // INTELLIGENCE NODE</span>
-                <strong>DANJI AI</strong>
+              <div className="floating-ai-identity">
+                <img src={tomoriIcon} alt="" className="tomori-header-avatar" />
+                <div>
+                  <span className="floating-ai-kicker">DANJI // INTELLIGENCE NODE</span>
+                  <strong>TOMORI</strong>
+                </div>
               </div>
               <div className="floating-ai-header-actions">
                 <button
@@ -357,14 +362,14 @@ function App() {
                       className={message.role === 'user' ? 'floating-message user-message' : 'floating-message ai-message'}
                       key={index}
                     >
-                      <span>{message.role === 'user' ? 'YOU' : 'DANJI AI'}</span>
+                      <span>{message.role === 'user' ? 'YOU' : 'TOMORI'}</span>
                       <p>{message.content}</p>
                     </article>
                   ))}
 
                   {isThinking && (
                     <article className="floating-message ai-message">
-                      <span>DANJI AI</span>
+                      <span>TOMORI</span>
                       <p>Processing<span className="thinking-dots">...</span></p>
                     </article>
                   )}
@@ -376,7 +381,7 @@ function App() {
                   <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
-                    placeholder="Message DANJI AI..."
+                    placeholder="Message Tomori..."
                     maxLength={4000}
                     disabled={isThinking}
                     onKeyDown={(event) => {
@@ -398,7 +403,7 @@ function App() {
         <button
           className="floating-ai-trigger"
           type="button"
-          aria-label={floatingAssistantOpen ? 'Close DANJI AI' : 'Open DANJI AI'}
+          aria-label={floatingAssistantOpen ? 'Close Tomori' : 'Open Tomori'}
           aria-expanded={floatingAssistantOpen}
           onClick={() => setFloatingAssistantOpen((open) => !open)}
         >
@@ -406,10 +411,10 @@ function App() {
             <span className="floating-close">×</span>
           ) : (
             <>
-              <span className="floating-ai-orb">AI</span>
+              <img src={tomoriIcon} alt="Tomori" className="tomori-trigger-avatar" />
               <span className="floating-ai-label">
-                <strong>DANJI</strong>
-                <small>ASSISTANT</small>
+                <strong>TOMORI</strong>
+                <small>DANJI AI</small>
               </span>
             </>
           )}
