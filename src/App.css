@@ -1103,3 +1103,71 @@ button {
     display: none;
   }
 }
+
+
+/* Tomori response emotes */
+.tomori-response {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.tomori-response.compact {
+  gap: 8px;
+}
+
+.tomori-response p {
+  flex: 1;
+  min-width: 0;
+}
+
+.tomori-emote {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 58px;
+  display: block;
+  background-image: url('./assets/tomori-emotes.webp');
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  filter: drop-shadow(0 5px 10px rgba(0,0,0,.28));
+}
+
+.tomori-response.compact .tomori-emote {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+}
+
+.tomori-emote-neutral { background-position: 0% 0%; }
+.tomori-emote-happy { background-position: 33.333% 0%; }
+.tomori-emote-excited { background-position: 66.667% 0%; }
+.tomori-emote-crying { background-position: 100% 0%; }
+
+.tomori-emote-shy { background-position: 0% 33.333%; }
+.tomori-emote-confused { background-position: 33.333% 33.333%; }
+.tomori-emote-angry { background-position: 66.667% 33.333%; }
+.tomori-emote-working { background-position: 100% 33.333%; }
+
+.tomori-emote-love { background-position: 0% 66.667%; }
+.tomori-emote-drink { background-position: 33.333% 66.667%; }
+.tomori-emote-sleepy { background-position: 66.667% 66.667%; }
+.tomori-emote-cool { background-position: 100% 66.667%; }
+
+.tomori-emote-shocked { background-position: 0% 100%; }
+.tomori-emote-thinking { background-position: 33.333% 100%; }
+.tomori-emote-food { background-position: 66.667% 100%; }
+.tomori-emote-cute { background-position: 100% 100%; }
+
+@media (max-width: 820px) {
+  .tomori-emote {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+  }
+
+  .tomori-response.compact .tomori-emote {
+    width: 40px;
+    height: 40px;
+    flex-basis: 40px;
+  }
+}
