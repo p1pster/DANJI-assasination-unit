@@ -3037,3 +3037,41 @@ button.ethical-tool-card.active .ethical-tool-marker {
   object-fit: contain;
   filter: drop-shadow(0 0 18px rgba(160,28,51,.34));
 }
+
+
+.crossgame-reward-totals {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+.crossgame-reward-totals span {
+  min-width: 145px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255,255,255,.075);
+  background: rgba(255,255,255,.018);
+  color: #6f686b;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .12em;
+}
+
+.crossgame-reward-totals b {
+  color: #d52e49;
+  font-size: 16px;
+  margin-right: 4px;
+}
+
+.crossgame-next {
+  display: block;
+  margin-top: 12px;
+  color: #847b7e;
+  font-size: 8px;
+  font-weight: 850;
+  letter-spacing: .13em;
+}
+
+.crossgame-next.complete {
+  color: #7ea087;
+}
