@@ -96,8 +96,9 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
             <p className="kicker">NETWORK RANKINGS // LIVE</p>
             <h1>Leaderboard.</h1>
             <p>
-              Every DANJI member starts with 100 XP. Successful conversations with
-              Tomori currently award 5 XP, with more ways to earn XP coming later.
+              First login awards 100 XP, creating the DANJI membership adds 25 XP,
+              linked sign-in methods add 25 XP each, and successful Tomori replies
+              currently award 5 XP.
             </p>
           </div>
 
@@ -213,7 +214,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
               </div>
               <div>
                 <strong>+25</strong>
-                <small>NEW LINKED SIGN-IN</small>
+                <small>SIGN UP / NEW LINK</small>
               </div>
               <div>
                 <strong>+5</strong>
