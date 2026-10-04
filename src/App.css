@@ -1171,3 +1171,27 @@ button {
     flex-basis: 40px;
   }
 }
+
+
+/* Reliable Tomori avatar: use the first cell of the working emote atlas */
+.tomori-avatar {
+  display: block;
+  background-image: url('./assets/tomori-emotes.webp');
+  background-repeat: no-repeat;
+  background-size: 400% 400%;
+  background-position: 0% 0%;
+}
+
+.tomori-trigger-avatar {
+  border-radius: 12px;
+  background-color: rgba(8,8,10,.45);
+}
+
+.tomori-header-avatar {
+  border-radius: 10px;
+}
+
+.tomori-sidebar-avatar {
+  border-radius: 18px;
+  background-color: rgba(255,255,255,.02);
+}
