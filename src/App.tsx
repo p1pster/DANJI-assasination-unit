@@ -4,11 +4,11 @@ import {
   GoogleAuthProvider,
   onAuthStateChanged,
   signInWithPopup,
+  signInWithRedirect,
   signOut,
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
-import tomoriIcon from './assets/tomori.webp'
 import './App.css'
 
 type Tab = 'welcome' | 'assistant' | 'briefing' | 'archive'
@@ -58,10 +58,38 @@ function App() {
 
   const handleGoogleSignIn = async () => {
     setAssistantError('')
+    const provider = new GoogleAuthProvider()
+    provider.setCustomParameters({ prompt: 'select_account' })
+
     try {
-      await signInWithPopup(auth, new GoogleAuthProvider())
-    } catch {
-      setAssistantError('Google sign-in failed. Check that Google is enabled in Firebase Authentication.')
+      await signInWithPopup(auth, provider)
+    } catch (error) {
+      const code =
+        typeof error === 'object' && error !== null && 'code' in error
+          ? String((error as { code?: unknown }).code || '')
+          : ''
+
+      if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
+        try {
+          await signInWithRedirect(auth, provider)
+          return
+        } catch {
+          setAssistantError('Google sign-in was blocked by the browser. Allow redirects/pop-ups for danji.web.app and try again.')
+          return
+        }
+      }
+
+      if (code === 'auth/unauthorized-domain') {
+        setAssistantError('Google sign-in is not authorised for danji.web.app yet. Add danji.web.app in Firebase Authentication → Settings → Authorized domains.')
+        return
+      }
+
+      if (code === 'auth/operation-not-allowed') {
+        setAssistantError('Google sign-in is disabled in Firebase. Enable Google under Authentication → Sign-in method.')
+        return
+      }
+
+      setAssistantError(`Google sign-in failed${code ? ` (${code})` : ''}. Check Firebase Authentication settings.`)
     }
   }
 
@@ -264,7 +292,7 @@ function App() {
 
           <div className="assistant-console">
             <aside className="assistant-sidebar">
-              <img className="tomori-sidebar-avatar" src={tomoriIcon} alt="Tomori" />
+              <i className="tomori-sidebar-avatar tomori-avatar" role="img" aria-label="Tomori" />
               <span className="card-label">AI CORE</span>
               <strong>TOMORI // 01</strong>
               <p>
@@ -353,7 +381,7 @@ function App() {
           <section className="floating-ai-panel" aria-label="Tomori AI assistant">
             <header className="floating-ai-header">
               <div className="floating-ai-identity">
-                <img src={tomoriIcon} alt="" className="tomori-header-avatar" />
+                <i className="tomori-header-avatar tomori-avatar" aria-hidden="true" />
                 <div>
                   <span className="floating-ai-kicker">DANJI // INTELLIGENCE NODE</span>
                   <strong>TOMORI</strong>
@@ -458,7 +486,7 @@ function App() {
             <span className="floating-close">×</span>
           ) : (
             <>
-              <img src={tomoriIcon} alt="Tomori" className="tomori-trigger-avatar" />
+              <i className="tomori-trigger-avatar tomori-avatar" role="img" aria-label="Tomori" />
               <span className="floating-ai-label">
                 <strong>TOMORI</strong>
                 <small>DANJI AI</small>
