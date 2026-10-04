@@ -10,9 +10,10 @@ import {
 import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
 import EthicalHacking from './EthicalHacking'
+import Leaderboard from './Leaderboard'
 import './App.css'
 
-type Tab = 'welcome' | 'assistant' | 'recruitment' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
+type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
 type TomoriEmotion =
   | 'neutral'
   | 'happy'
@@ -55,7 +56,20 @@ function App() {
   const [assistantError, setAssistantError] = useState('')
   const [floatingAssistantOpen, setFloatingAssistantOpen] = useState(false)
 
-  useEffect(() => onAuthStateChanged(auth, setUser), [])
+  useEffect(
+    () =>
+      onAuthStateChanged(auth, (nextUser) => {
+        setUser(nextUser)
+
+        if (nextUser) {
+          const registerMember = httpsCallable(functions, 'registerDanjiMember')
+          registerMember().catch((error) => {
+            console.error('DANJI member registration failed', error)
+          })
+        }
+      }),
+    [],
+  )
 
   const handleGoogleSignIn = async () => {
     setAssistantError('')
@@ -185,6 +199,13 @@ function App() {
             onClick={() => setActiveTab('recruitment')}
           >
             Recruitment
+          </button>
+          <button
+            className={activeTab === 'leaderboard' ? 'tab active' : 'tab'}
+            type="button"
+            onClick={() => setActiveTab('leaderboard')}
+          >
+            Leaderboard
           </button>
           <button
             className={activeTab === 'minecraft' ? 'tab active' : 'tab'}
@@ -487,10 +508,15 @@ function App() {
             </div>
           </div>
         </section>
+      ) : activeTab === 'leaderboard' ? (
+        <Leaderboard
+          currentUid={user?.uid}
+          onJoin={() => setActiveTab('recruitment')}
+        />
       ) : activeTab === 'minecraft' ? (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>04</span>
+            <span>05</span>
             MINECRAFT
           </div>
           <div className="placeholder-content">
@@ -504,7 +530,7 @@ function App() {
       ) : (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>{activeTab === 'briefing' ? '06' : '07'}</span>
+            <span>{activeTab === 'briefing' ? '07' : '08'}</span>
             {activeTab.toUpperCase()}
           </div>
           <div className="placeholder-content">
