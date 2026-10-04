@@ -1,4 +1,5 @@
 const { initializeApp } = require("firebase-admin/app");
+const { getAuth: getAdminAuth } = require("firebase-admin/auth");
 const { FieldValue, getFirestore } = require("firebase-admin/firestore");
 const { defineSecret } = require("firebase-functions/params");
 const { HttpsError, onCall } = require("firebase-functions/v2/https");
@@ -49,9 +50,17 @@ function memberIdentity(auth) {
   };
 }
 
+function signInProvider(auth) {
+  const firebaseToken = auth && auth.token && auth.token.firebase;
+  return firebaseToken && typeof firebaseToken.sign_in_provider === "string"
+    ? firebaseToken.sign_in_provider
+    : "";
+}
+
 async function ensureDanjiMember(auth) {
   const ref = db.collection("danjiMembers").doc(auth.uid);
   const identity = memberIdentity(auth);
+  const currentProvider = signInProvider(auth);
 
   await db.runTransaction(async (transaction) => {
     const snapshot = await transaction.get(ref);
@@ -62,14 +71,26 @@ async function ensureDanjiMember(auth) {
         ...identity,
         xp: 100,
         tomoriMessages: 0,
+        rewardedProviders: currentProvider ? [currentProvider] : [],
         joinedAt: FieldValue.serverTimestamp(),
         lastActive: FieldValue.serverTimestamp(),
       });
       return;
     }
 
+    const data = snapshot.data() || {};
+    const existingRewarded = Array.isArray(data.rewardedProviders)
+      ? data.rewardedProviders.filter((value) => typeof value === "string")
+      : [];
+
+    const rewardedProviders =
+      currentProvider && existingRewarded.length === 0
+        ? [currentProvider]
+        : existingRewarded;
+
     transaction.update(ref, {
       ...identity,
+      rewardedProviders,
       lastActive: FieldValue.serverTimestamp(),
     });
   });
@@ -122,6 +143,109 @@ exports.registerDanjiMember = onCall(
 
     await ensureDanjiMember(request.auth);
     return { ok: true };
+  },
+);
+
+
+exports.awardLinkedProvider = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in before linking an account.");
+    }
+
+    const providerId =
+      request.data && typeof request.data.providerId === "string"
+        ? request.data.providerId.trim().slice(0, 80)
+        : "";
+
+    const allowedProviders = new Set([
+      "password",
+      "phone",
+      "google.com",
+      "facebook.com",
+      "github.com",
+      "yahoo.com",
+      "microsoft.com",
+      "apple.com",
+    ]);
+
+    if (!allowedProviders.has(providerId)) {
+      throw new HttpsError("invalid-argument", "Unsupported DANJI sign-in provider.");
+    }
+
+    const userRecord = await getAdminAuth().getUser(request.auth.uid);
+    const verifiedProviders = new Set(
+      userRecord.providerData
+        .map((provider) => provider.providerId)
+        .filter((value) => typeof value === "string"),
+    );
+
+    if (userRecord.phoneNumber) verifiedProviders.add("phone");
+    if (userRecord.email) {
+      const passwordProvider = userRecord.providerData.some(
+        (provider) => provider.providerId === "password",
+      );
+      if (passwordProvider) verifiedProviders.add("password");
+    }
+
+    if (!verifiedProviders.has(providerId)) {
+      throw new HttpsError(
+        "failed-precondition",
+        "That sign-in method is not linked to this DANJI account yet.",
+      );
+    }
+
+    const ref = db.collection("danjiMembers").doc(request.auth.uid);
+    let awarded = false;
+    let xp = 100;
+
+    await db.runTransaction(async (transaction) => {
+      const snapshot = await transaction.get(ref);
+      const identity = memberIdentity(request.auth);
+
+      if (!snapshot.exists) {
+        transaction.set(ref, {
+          uid: request.auth.uid,
+          ...identity,
+          xp: 100,
+          tomoriMessages: 0,
+          rewardedProviders: [providerId],
+          joinedAt: FieldValue.serverTimestamp(),
+          lastActive: FieldValue.serverTimestamp(),
+        });
+        xp = 100;
+        return;
+      }
+
+      const data = snapshot.data() || {};
+      const currentXp = typeof data.xp === "number" ? data.xp : 100;
+      const rewardedProviders = Array.isArray(data.rewardedProviders)
+        ? data.rewardedProviders.filter((value) => typeof value === "string")
+        : [];
+
+      if (rewardedProviders.includes(providerId)) {
+        xp = currentXp;
+        return;
+      }
+
+      xp = currentXp + 25;
+      awarded = true;
+
+      transaction.update(ref, {
+        ...identity,
+        xp,
+        rewardedProviders: [...rewardedProviders, providerId],
+        lastActive: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return { awarded, points: awarded ? 25 : 0, xp };
   },
 );
 
