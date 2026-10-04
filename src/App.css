@@ -3027,3 +3027,13 @@ button.ethical-tool-card.active .ethical-tool-marker {
     padding: 18px;
   }
 }
+
+
+.crossgame-reward-mask {
+  width: 84px;
+  height: 84px;
+  display: block;
+  margin: 0 0 14px;
+  object-fit: contain;
+  filter: drop-shadow(0 0 18px rgba(160,28,51,.34));
+}
