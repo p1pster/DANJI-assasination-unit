@@ -39,6 +39,30 @@ const initials = (name: string) =>
     .map((part) => part[0]?.toUpperCase())
     .join('') || 'D'
 
+const geometricThresholds = (count: number, start: number, end: number) => {
+  if (count <= 1) return [Math.round(start)]
+  const ratio = Math.pow(end / start, 1 / (count - 1))
+  return Array.from({ length: count }, (_, index) =>
+    index === count - 1 ? Math.round(end) : Math.round(start * Math.pow(ratio, index)),
+  )
+}
+
+const WELLDONE_THRESHOLDS = [
+  200,
+  ...geometricThresholds(99, 400, 10_000_000_000),
+]
+const MASK_THRESHOLDS = geometricThresholds(84, 400, 10_000_000_000)
+
+const rewardCountsForXp = (xp: number) => ({
+  emotes: WELLDONE_THRESHOLDS.filter((threshold) => xp >= threshold).length,
+  masks: (xp >= 200 ? 1 : 0) + MASK_THRESHOLDS.filter((threshold) => xp >= threshold).length,
+})
+
+const nextRewardThreshold = (xp: number) =>
+  [...WELLDONE_THRESHOLDS, ...MASK_THRESHOLDS]
+    .filter((threshold) => threshold > xp)
+    .sort((a, b) => a - b)[0] ?? null
+
 const toEntry = (id: string, data: DocumentData): LeaderboardEntry => ({
   uid: id,
   displayName:
@@ -56,7 +80,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
   const [error, setError] = useState('')
   const [currentXp, setCurrentXp] = useState(0)
   const [rewardCode, setRewardCode] = useState('')
-  const [rewardRedeemed, setRewardRedeemed] = useState(false)
+  const [lastClaimedXp, setLastClaimedXp] = useState(0)
   const [rewardBusy, setRewardBusy] = useState(false)
   const [rewardError, setRewardError] = useState('')
 
@@ -86,17 +110,20 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
     if (!currentUid) {
       setCurrentXp(0)
       setRewardCode('')
-      setRewardRedeemed(false)
+      setLastClaimedXp(0)
       return
     }
 
     return onSnapshot(doc(db, 'danjiMembers', currentUid), (snapshot) => {
       const data = snapshot.data()
       setCurrentXp(typeof data?.xp === 'number' ? data.xp : 0)
-      if (data?.qas200Claimed === true) {
-        setRewardRedeemed(true)
-        setRewardCode('')
-      }
+      setLastClaimedXp(
+        typeof data?.qasRewardLastClaimedXp === 'number'
+          ? data.qasRewardLastClaimedXp
+          : data?.qas200Claimed === true
+            ? 200
+            : 0,
+      )
     })
   }, [currentUid])
 
@@ -111,13 +138,14 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
           unlocked: boolean
           redeemed: boolean
           code: string | null
-          itemId: string
-          itemName: string
+          xp: number
+          emoteCount: number
+          cosmeticCount: number
+          nextThreshold: number | null
         }
       >(functions, 'getQasRewardCode')
 
       const result = await claim({})
-      setRewardRedeemed(result.data.redeemed)
       setRewardCode(result.data.code || '')
     } catch (claimError) {
       const message =
@@ -189,44 +217,73 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
           </div>
         )}
 
-        {currentUid && (
-          <section className={currentXp >= 200 ? 'crossgame-reward unlocked' : 'crossgame-reward'}>
-            <div className="crossgame-reward-copy">
-              <img className="crossgame-reward-mask" src="/assets/danji-mask.webp" alt="DANJI Mask" />
-              <span className="card-label">200 XP CROSS-GAME REWARD</span>
-              <strong>DANJI Mask</strong>
-              <p>
-                Reach 200 DANJI XP to unlock this exclusive cosmetic in Quill & Circle.
-                Your progress: {Math.min(currentXp, 200)} / 200 XP.
-              </p>
-              <div className="crossgame-progress">
-                <i style={{ width: `${Math.min(100, (currentXp / 200) * 100)}%` }} />
-              </div>
-            </div>
+        {currentUid && (() => {
+          const rewards = rewardCountsForXp(currentXp)
+          const claimed = rewardCountsForXp(lastClaimedXp)
+          const nextThreshold = nextRewardThreshold(currentXp)
+          const fullySynced =
+            rewards.emotes === claimed.emotes &&
+            rewards.masks === claimed.masks &&
+            rewards.emotes > 0
 
-            <div className="crossgame-reward-action">
-              {rewardRedeemed ? (
-                <span className="crossgame-claimed">CLAIMED IN QUILL & CIRCLE ✓</span>
-              ) : currentXp >= 200 ? (
-                <>
-                  <button type="button" onClick={getQasReward} disabled={rewardBusy}>
-                    {rewardBusy ? 'CREATING CODE…' : rewardCode ? 'REFRESH CODE' : 'GET Q&C CLAIM CODE'}
-                  </button>
-                  {rewardCode && (
-                    <div className="crossgame-code">
-                      <span>YOUR ONE-TIME CODE</span>
-                      <code>{rewardCode}</code>
-                      <small>Open Quill & Circle → Cloud & Profile → DANJI Reward and enter this code.</small>
-                    </div>
-                  )}
-                </>
-              ) : (
-                <span className="crossgame-locked">{200 - currentXp} XP TO GO</span>
-              )}
-              {rewardError && <p className="crossgame-error">{rewardError}</p>}
-            </div>
-          </section>
-        )}
+          return (
+            <section className={currentXp >= 200 ? 'crossgame-reward unlocked' : 'crossgame-reward'}>
+              <div className="crossgame-reward-copy">
+                <img className="crossgame-reward-mask" src="/assets/danji-mask.webp" alt="DANJI Mask" />
+                <span className="card-label">QUILL & CIRCLE REWARD TRACK</span>
+                <strong>Weldone Collection</strong>
+                <p>
+                  Your DANJI score now unlocks 100 ordered Weldone emotes and a collection
+                  of mask cosmetics in Quill & Circle. Rewards begin at 200 points and the
+                  final prestige rewards sit at 10,000,000,000 points.
+                </p>
+                <div className="crossgame-reward-totals">
+                  <span><b>{rewards.emotes}</b> / 100 EMOTES</span>
+                  <span><b>{rewards.masks}</b> / 85 MASKS</span>
+                </div>
+                {nextThreshold ? (
+                  <small className="crossgame-next">
+                    NEXT REWARD // {nextThreshold.toLocaleString()} POINTS
+                  </small>
+                ) : (
+                  <small className="crossgame-next complete">ALL REWARDS UNLOCKED</small>
+                )}
+              </div>
+
+              <div className="crossgame-reward-action">
+                {currentXp >= 200 ? (
+                  <>
+                    {fullySynced && !rewardCode && (
+                      <span className="crossgame-claimed">CURRENT REWARDS SYNCED ✓</span>
+                    )}
+                    <button type="button" onClick={getQasReward} disabled={rewardBusy}>
+                      {rewardBusy
+                        ? 'CREATING CODE…'
+                        : rewardCode
+                          ? 'REFRESH CLAIM CODE'
+                          : fullySynced
+                            ? 'CREATE RESTORE CODE'
+                            : 'GET LATEST Q&C REWARDS'}
+                    </button>
+                    {rewardCode && (
+                      <div className="crossgame-code">
+                        <span>YOUR ONE-TIME CODE</span>
+                        <code>{rewardCode}</code>
+                        <small>
+                          Open Quill & Circle → Cloud & Profile → DANJI Rewards. The code
+                          grants every Weldone emote and mask your current score has earned.
+                        </small>
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <span className="crossgame-locked">{200 - currentXp} POINTS TO FIRST REWARD</span>
+                )}
+                {rewardError && <p className="crossgame-error">{rewardError}</p>}
+              </div>
+            </section>
+          )
+        })()}
 
         {loading ? (
           <div className="leaderboard-state">Loading DANJI rankings…</div>
