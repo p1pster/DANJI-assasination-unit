@@ -280,15 +280,101 @@ exports.awardLinkedProvider = onCall(
   },
 );
 
-const QAS_200_REWARD = {
-  threshold: 200,
-  itemId: "danji_mask",
-  itemName: "DANJI Mask",
-};
-const QAS_200_LEGACY_ITEM_IDS = new Set(["danji_operator_hat"]);
+const QAS_REWARD_MIN_XP = 200;
+const QAS_REWARD_MAX_XP = 10_000_000_000;
+const QAS_WELLDONE_COUNT = 100;
+const QAS_BONUS_MASK_COUNT = 84;
+const QAS_LEGACY_ITEM_IDS = new Set(["danji_operator_hat", "danji_mask"]);
 
 function qasRewardHash(code) {
   return createHash("sha256").update(code).digest("hex");
+}
+
+function geometricThresholds(count, start, end) {
+  if (count <= 1) return [Math.round(start)];
+  const ratio = Math.pow(end / start, 1 / (count - 1));
+  return Array.from({ length: count }, (_, index) =>
+    index === count - 1
+      ? Math.round(end)
+      : Math.round(start * Math.pow(ratio, index)),
+  );
+}
+
+const QAS_WELLDONE_THRESHOLDS = [
+  QAS_REWARD_MIN_XP,
+  ...geometricThresholds(QAS_WELLDONE_COUNT - 1, 400, QAS_REWARD_MAX_XP),
+];
+
+const QAS_MASK_THRESHOLDS = geometricThresholds(
+  QAS_BONUS_MASK_COUNT,
+  400,
+  QAS_REWARD_MAX_XP,
+);
+
+function paddedRewardId(prefix, index) {
+  return prefix + String(index + 1).padStart(3, "0");
+}
+
+function qasRewardsForXp(xp) {
+  const safeXp = Math.max(0, Number(xp) || 0);
+  const emoteIds = QAS_WELLDONE_THRESHOLDS
+    .map((threshold, index) => ({ threshold, id: paddedRewardId("danji_weldone_", index) }))
+    .filter((entry) => safeXp >= entry.threshold)
+    .map((entry) => entry.id);
+
+  const cosmeticIds = [];
+  if (safeXp >= QAS_REWARD_MIN_XP) cosmeticIds.push("danji_mask");
+
+  QAS_MASK_THRESHOLDS.forEach((threshold, index) => {
+    if (safeXp >= threshold) {
+      cosmeticIds.push(paddedRewardId("danji_mask_", index));
+    }
+  });
+
+  const allThresholds = [...QAS_WELLDONE_THRESHOLDS, ...QAS_MASK_THRESHOLDS]
+    .filter((threshold) => threshold > safeXp)
+    .sort((a, b) => a - b);
+
+  return {
+    emoteIds,
+    cosmeticIds,
+    nextThreshold: allThresholds.length ? allThresholds[0] : null,
+  };
+}
+
+function claimRewardPayload(claim) {
+  if (
+    Number(claim.rewardVersion) === 2 &&
+    Array.isArray(claim.emoteIds) &&
+    Array.isArray(claim.cosmeticIds)
+  ) {
+    return {
+      emoteIds: claim.emoteIds
+        .filter((id) => typeof id === "string" && /^danji_weldone_(00[1-9]|0[1-9][0-9]|100)$/.test(id))
+        .slice(0, QAS_WELLDONE_COUNT),
+      cosmeticIds: claim.cosmeticIds
+        .filter(
+          (id) =>
+            id === "danji_mask" ||
+            /^danji_mask_(00[1-9]|0[1-7][0-9]|08[0-4])$/.test(id),
+        )
+        .slice(0, QAS_BONUS_MASK_COUNT + 1),
+      xpSnapshot: Math.max(0, Number(claim.xpSnapshot) || 0),
+    };
+  }
+
+  if (
+    QAS_LEGACY_ITEM_IDS.has(claim.itemId) &&
+    Number(claim.threshold) === QAS_REWARD_MIN_XP
+  ) {
+    return {
+      emoteIds: ["danji_weldone_001"],
+      cosmeticIds: ["danji_mask"],
+      xpSnapshot: QAS_REWARD_MIN_XP,
+    };
+  }
+
+  return null;
 }
 
 exports.getQasRewardCode = onCall(
@@ -300,39 +386,55 @@ exports.getQasRewardCode = onCall(
   },
   async (request) => {
     if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign in to claim the Quill & Circle reward.");
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in to claim Quill & Circle rewards.",
+      );
     }
 
     await ensureDanjiMember(request.auth);
 
     const memberRef = db.collection("danjiMembers").doc(request.auth.uid);
-    const initialMember = await memberRef.get();
-    const initialData = initialMember.data() || {};
-    const xp = typeof initialData.xp === "number" ? initialData.xp : 0;
+    const memberSnap = await memberRef.get();
+    const memberData = memberSnap.data() || {};
+    const xp = typeof memberData.xp === "number" ? memberData.xp : 0;
 
-    if (xp < QAS_200_REWARD.threshold) {
+    if (xp < QAS_REWARD_MIN_XP) {
       throw new HttpsError(
         "failed-precondition",
-        `Reach ${QAS_200_REWARD.threshold} DANJI XP to unlock this Quill & Circle item.`,
+        `Reach ${QAS_REWARD_MIN_XP} DANJI points to unlock the first Quill & Circle reward.`,
       );
     }
 
-    const existingClaimId =
-      typeof initialData.qas200RewardClaimId === "string"
-        ? initialData.qas200RewardClaimId
+    const rewards = qasRewardsForXp(xp);
+    const activeClaimId =
+      typeof memberData.qasRewardActiveClaimId === "string"
+        ? memberData.qasRewardActiveClaimId
         : "";
 
-    if (existingClaimId) {
-      const existingClaim = await db.collection("_qasRewardClaims").doc(existingClaimId).get();
-      if (existingClaim.exists) {
-        const claim = existingClaim.data() || {};
-        return {
-          unlocked: true,
-          redeemed: Boolean(claim.redeemedByQasUid),
-          code: claim.redeemedByQasUid ? null : claim.code,
-          itemId: QAS_200_REWARD.itemId,
-          itemName: QAS_200_REWARD.itemName,
-        };
+    if (activeClaimId) {
+      const activeClaim = await db.collection("_qasRewardClaims").doc(activeClaimId).get();
+
+      if (activeClaim.exists) {
+        const claim = activeClaim.data() || {};
+        const payload = claimRewardPayload(claim);
+
+        if (
+          payload &&
+          !claim.redeemedByQasUid &&
+          payload.emoteIds.length === rewards.emoteIds.length &&
+          payload.cosmeticIds.length === rewards.cosmeticIds.length
+        ) {
+          return {
+            unlocked: true,
+            redeemed: false,
+            code: claim.code,
+            xp,
+            emoteCount: rewards.emoteIds.length,
+            cosmeticCount: rewards.cosmeticIds.length,
+            nextThreshold: rewards.nextThreshold,
+          };
+        }
       }
     }
 
@@ -341,55 +443,45 @@ exports.getQasRewardCode = onCall(
     const claimRef = db.collection("_qasRewardClaims").doc(claimId);
 
     await db.runTransaction(async (transaction) => {
-      const memberSnap = await transaction.get(memberRef);
-      const memberData = memberSnap.data() || {};
-      const memberXp = typeof memberData.xp === "number" ? memberData.xp : 0;
+      const freshMember = await transaction.get(memberRef);
+      const freshData = freshMember.data() || {};
+      const freshXp = typeof freshData.xp === "number" ? freshData.xp : 0;
 
-      if (memberXp < QAS_200_REWARD.threshold) {
+      if (freshXp < QAS_REWARD_MIN_XP) {
         throw new HttpsError(
           "failed-precondition",
-          `Reach ${QAS_200_REWARD.threshold} DANJI XP to unlock this Quill & Circle item.`,
+          `Reach ${QAS_REWARD_MIN_XP} DANJI points to unlock the first Quill & Circle reward.`,
         );
       }
 
-      if (
-        typeof memberData.qas200RewardClaimId === "string" &&
-        memberData.qas200RewardClaimId
-      ) {
-        return;
-      }
+      const freshRewards = qasRewardsForXp(freshXp);
 
       transaction.set(claimRef, {
         code,
         danjiUid: request.auth.uid,
-        threshold: QAS_200_REWARD.threshold,
-        itemId: QAS_200_REWARD.itemId,
-        itemName: QAS_200_REWARD.itemName,
+        rewardVersion: 2,
+        xpSnapshot: freshXp,
+        emoteIds: freshRewards.emoteIds,
+        cosmeticIds: freshRewards.cosmeticIds,
         createdAt: FieldValue.serverTimestamp(),
         redeemedByQasUid: null,
         redeemedAt: null,
       });
 
       transaction.update(memberRef, {
-        qas200RewardClaimId: claimId,
-        qas200Unlocked: true,
+        qasRewardActiveClaimId: claimId,
+        qasRewardUnlockedAt: FieldValue.serverTimestamp(),
       });
     });
 
-    const refreshed = await memberRef.get();
-    const refreshedClaimId =
-      typeof refreshed.data()?.qas200RewardClaimId === "string"
-        ? refreshed.data().qas200RewardClaimId
-        : claimId;
-    const finalClaim = await db.collection("_qasRewardClaims").doc(refreshedClaimId).get();
-    const finalData = finalClaim.data() || {};
-
     return {
       unlocked: true,
-      redeemed: Boolean(finalData.redeemedByQasUid),
-      code: finalData.redeemedByQasUid ? null : finalData.code,
-      itemId: QAS_200_REWARD.itemId,
-      itemName: QAS_200_REWARD.itemName,
+      redeemed: false,
+      code,
+      xp,
+      emoteCount: rewards.emoteIds.length,
+      cosmeticCount: rewards.cosmeticIds.length,
+      nextThreshold: rewards.nextThreshold,
     };
   },
 );
@@ -427,6 +519,7 @@ exports.consumeQasReward = onRequest(
     const claimId = qasRewardHash(code);
     const claimRef = db.collection("_qasRewardClaims").doc(claimId);
     let outcome = "invalid";
+    let payload = null;
 
     try {
       await db.runTransaction(async (transaction) => {
@@ -438,18 +531,18 @@ exports.consumeQasReward = onRequest(
         }
 
         const claim = claimSnap.data() || {};
+        payload = claimRewardPayload(claim);
 
-        if (
-          (claim.itemId !== QAS_200_REWARD.itemId &&
-            !QAS_200_LEGACY_ITEM_IDS.has(claim.itemId)) ||
-          Number(claim.threshold) !== QAS_200_REWARD.threshold
-        ) {
+        if (!payload) {
           outcome = "invalid";
           return;
         }
 
         if (claim.redeemedByQasUid) {
-          outcome = claim.redeemedByQasUid === qasUid ? "already_same_user" : "already_used";
+          outcome =
+            claim.redeemedByQasUid === qasUid
+              ? "already_same_user"
+              : "already_used";
           return;
         }
 
@@ -463,7 +556,9 @@ exports.consumeQasReward = onRequest(
           transaction.set(
             db.collection("danjiMembers").doc(claim.danjiUid),
             {
-              qas200Claimed: true,
+              qasRewardLastClaimedXp: payload.xpSnapshot,
+              qasRewardClaimedAt: FieldValue.serverTimestamp(),
+              qas200Claimed: payload.xpSnapshot >= QAS_REWARD_MIN_XP,
               qas200ClaimedAt: FieldValue.serverTimestamp(),
             },
             { merge: true },
@@ -476,7 +571,7 @@ exports.consumeQasReward = onRequest(
       return;
     }
 
-    if (outcome === "invalid") {
+    if (outcome === "invalid" || !payload) {
       res.status(404).json({ ok: false, error: "invalid_claim" });
       return;
     }
@@ -489,8 +584,10 @@ exports.consumeQasReward = onRequest(
     res.status(200).json({
       ok: true,
       alreadyRedeemed: outcome === "already_same_user",
-      itemId: QAS_200_REWARD.itemId,
-      itemName: QAS_200_REWARD.itemName,
+      rewardVersion: 2,
+      xpSnapshot: payload.xpSnapshot,
+      emoteIds: payload.emoteIds,
+      cosmeticIds: payload.cosmeticIds,
     });
   },
 );
