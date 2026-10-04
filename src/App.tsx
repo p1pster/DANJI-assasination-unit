@@ -30,6 +30,7 @@ function App() {
   const [draft, setDraft] = useState('')
   const [isThinking, setIsThinking] = useState(false)
   const [assistantError, setAssistantError] = useState('')
+  const [floatingAssistantOpen, setFloatingAssistantOpen] = useState(false)
 
   useEffect(() => onAuthStateChanged(auth, setUser), [])
 
@@ -157,7 +158,7 @@ function App() {
               <button
                 className="primary-action"
                 type="button"
-                onClick={() => setActiveTab('assistant')}
+                onClick={() => setFloatingAssistantOpen(true)}
               >
                 OPEN DANJI AI
                 <span aria-hidden="true">↗</span>
@@ -309,6 +310,110 @@ function App() {
           </div>
         </section>
       )}
+
+      <div className={floatingAssistantOpen ? 'floating-ai open' : 'floating-ai'}>
+        {floatingAssistantOpen && (
+          <section className="floating-ai-panel" aria-label="DANJI AI assistant">
+            <header className="floating-ai-header">
+              <div>
+                <span className="floating-ai-kicker">DANJI // INTELLIGENCE NODE</span>
+                <strong>DANJI AI</strong>
+              </div>
+              <div className="floating-ai-header-actions">
+                <button
+                  type="button"
+                  title="Open full assistant"
+                  onClick={() => {
+                    setActiveTab('assistant')
+                    setFloatingAssistantOpen(false)
+                  }}
+                >
+                  ↗
+                </button>
+                <button
+                  type="button"
+                  title="Close assistant"
+                  onClick={() => setFloatingAssistantOpen(false)}
+                >
+                  ×
+                </button>
+              </div>
+            </header>
+
+            {!user ? (
+              <div className="floating-ai-signin">
+                <span className="status-dot idle" />
+                <p>Sign in to activate DANJI AI.</p>
+                <button type="button" onClick={handleGoogleSignIn}>
+                  SIGN IN WITH GOOGLE
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="floating-chat-log" aria-live="polite">
+                  {messages.map((message, index) => (
+                    <article
+                      className={message.role === 'user' ? 'floating-message user-message' : 'floating-message ai-message'}
+                      key={index}
+                    >
+                      <span>{message.role === 'user' ? 'YOU' : 'DANJI AI'}</span>
+                      <p>{message.content}</p>
+                    </article>
+                  ))}
+
+                  {isThinking && (
+                    <article className="floating-message ai-message">
+                      <span>DANJI AI</span>
+                      <p>Processing<span className="thinking-dots">...</span></p>
+                    </article>
+                  )}
+                </div>
+
+                {assistantError && <div className="floating-ai-error">{assistantError}</div>}
+
+                <form className="floating-ai-input" onSubmit={handleSend}>
+                  <textarea
+                    value={draft}
+                    onChange={(event) => setDraft(event.target.value)}
+                    placeholder="Message DANJI AI..."
+                    maxLength={4000}
+                    disabled={isThinking}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' && !event.shiftKey) {
+                        event.preventDefault()
+                        event.currentTarget.form?.requestSubmit()
+                      }
+                    }}
+                  />
+                  <button type="submit" disabled={!draft.trim() || isThinking}>
+                    ↑
+                  </button>
+                </form>
+              </>
+            )}
+          </section>
+        )}
+
+        <button
+          className="floating-ai-trigger"
+          type="button"
+          aria-label={floatingAssistantOpen ? 'Close DANJI AI' : 'Open DANJI AI'}
+          aria-expanded={floatingAssistantOpen}
+          onClick={() => setFloatingAssistantOpen((open) => !open)}
+        >
+          {floatingAssistantOpen ? (
+            <span className="floating-close">×</span>
+          ) : (
+            <>
+              <span className="floating-ai-orb">AI</span>
+              <span className="floating-ai-label">
+                <strong>DANJI</strong>
+                <small>ASSISTANT</small>
+              </span>
+            </>
+          )}
+        </button>
+      </div>
     </main>
   )
 }
