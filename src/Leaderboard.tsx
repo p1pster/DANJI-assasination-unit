@@ -192,8 +192,9 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
         {currentUid && (
           <section className={currentXp >= 200 ? 'crossgame-reward unlocked' : 'crossgame-reward'}>
             <div className="crossgame-reward-copy">
+              <img className="crossgame-reward-mask" src="/assets/danji-mask.webp" alt="DANJI Mask" />
               <span className="card-label">200 XP CROSS-GAME REWARD</span>
-              <strong>DANJI Operator Hat</strong>
+              <strong>DANJI Mask</strong>
               <p>
                 Reach 200 DANJI XP to unlock this exclusive cosmetic in Quill & Circle.
                 Your progress: {Math.min(currentXp, 200)} / 200 XP.
