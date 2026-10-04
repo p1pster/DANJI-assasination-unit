@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import {
   EmailAuthProvider,
@@ -146,6 +146,18 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
   )
 
   const linkedSet = useMemo(() => new Set(linkedProviders), [linkedProviders])
+
+  useEffect(() => {
+    setLinkedProviders(user?.providerData.map((provider) => provider.providerId) || [])
+  }, [user])
+
+  useEffect(
+    () => () => {
+      recaptchaRef.current?.clear()
+      recaptchaRef.current = null
+    },
+    [],
+  )
 
   const refreshLinkedProviders = async () => {
     if (!auth.currentUser) {
