@@ -282,9 +282,10 @@ exports.awardLinkedProvider = onCall(
 
 const QAS_200_REWARD = {
   threshold: 200,
-  itemId: "danji_operator_hat",
-  itemName: "DANJI Operator Hat",
+  itemId: "danji_mask",
+  itemName: "DANJI Mask",
 };
+const QAS_200_LEGACY_ITEM_IDS = new Set(["danji_operator_hat"]);
 
 function qasRewardHash(code) {
   return createHash("sha256").update(code).digest("hex");
@@ -439,7 +440,8 @@ exports.consumeQasReward = onRequest(
         const claim = claimSnap.data() || {};
 
         if (
-          claim.itemId !== QAS_200_REWARD.itemId ||
+          (claim.itemId !== QAS_200_REWARD.itemId &&
+            !QAS_200_LEGACY_ITEM_IDS.has(claim.itemId)) ||
           Number(claim.threshold) !== QAS_200_REWARD.threshold
         ) {
           outcome = "invalid";
