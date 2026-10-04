@@ -51,7 +51,7 @@ function App() {
 
     if (!text || isThinking) return
     if (!user) {
-      setAssistantError('Sign in before using DANJI AI.')
+      setAssistantError('Sign in before talking to Tomori.')
       return
     }
 
@@ -79,7 +79,7 @@ function App() {
     } catch (error) {
       console.error(error)
       setAssistantError(
-        'DANJI AI could not connect. The AI function may still need its API key or deployment.',
+        'Tomori could not connect. The AI function may still need its API key or deployment.',
       )
     } finally {
       setIsThinking(false)
@@ -113,7 +113,7 @@ function App() {
             type="button"
             onClick={() => setActiveTab('assistant')}
           >
-            AI
+            Tomori
           </button>
           <button
             className={activeTab === 'briefing' ? 'tab active' : 'tab'}
@@ -282,7 +282,7 @@ function App() {
                 <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder={user ? 'Message DANJI AI...' : 'Sign in to talk to Tomori...'}
+                  placeholder={user ? 'Message Tomori...' : 'Sign in to talk to Tomori...'}
                   maxLength={4000}
                   disabled={!user || isThinking}
                   onKeyDown={(event) => {
@@ -349,7 +349,7 @@ function App() {
             {!user ? (
               <div className="floating-ai-signin">
                 <span className="status-dot idle" />
-                <p>Sign in to activate DANJI AI.</p>
+                <p>Sign in to talk to Tomori.</p>
                 <button type="button" onClick={handleGoogleSignIn}>
                   SIGN IN WITH GOOGLE
                 </button>
