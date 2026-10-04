@@ -9,6 +9,7 @@ import {
 } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
+import EthicalHacking from './EthicalHacking'
 import './App.css'
 
 type Tab = 'welcome' | 'assistant' | 'recruitment' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
@@ -499,17 +500,7 @@ function App() {
           </div>
         </section>
       ) : activeTab === 'ethical' ? (
-        <section className="placeholder-page">
-          <div className="eyebrow">
-            <span>05</span>
-            ETHICAL HACKING
-          </div>
-          <div className="placeholder-content">
-            <p>SECURITY LAB // READY</p>
-            <h1>Ethical Hacking</h1>
-            <span>Authorised security labs, learning tools, notes and defensive testing will live here.</span>
-          </div>
-        </section>
+        <EthicalHacking />
       ) : (
         <section className="placeholder-page">
           <div className="eyebrow">
