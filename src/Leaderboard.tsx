@@ -1,13 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   collection,
+  doc,
   limit,
   onSnapshot,
   orderBy,
   query,
   type DocumentData,
 } from 'firebase/firestore'
-import { db } from './firebase'
+import { httpsCallable } from 'firebase/functions'
+import { db, functions } from './firebase'
 
 type LeaderboardEntry = {
   uid: string
@@ -52,6 +54,11 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [currentXp, setCurrentXp] = useState(0)
+  const [rewardCode, setRewardCode] = useState('')
+  const [rewardRedeemed, setRewardRedeemed] = useState(false)
+  const [rewardBusy, setRewardBusy] = useState(false)
+  const [rewardError, setRewardError] = useState('')
 
   useEffect(() => {
     const leaderboardQuery = query(
@@ -74,6 +81,57 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
       },
     )
   }, [])
+
+  useEffect(() => {
+    if (!currentUid) {
+      setCurrentXp(0)
+      setRewardCode('')
+      setRewardRedeemed(false)
+      return
+    }
+
+    return onSnapshot(doc(db, 'danjiMembers', currentUid), (snapshot) => {
+      const data = snapshot.data()
+      setCurrentXp(typeof data?.xp === 'number' ? data.xp : 0)
+      if (data?.qas200Claimed === true) {
+        setRewardRedeemed(true)
+        setRewardCode('')
+      }
+    })
+  }, [currentUid])
+
+  const getQasReward = async () => {
+    setRewardBusy(true)
+    setRewardError('')
+
+    try {
+      const claim = httpsCallable<
+        Record<string, never>,
+        {
+          unlocked: boolean
+          redeemed: boolean
+          code: string | null
+          itemId: string
+          itemName: string
+        }
+      >(functions, 'getQasRewardCode')
+
+      const result = await claim({})
+      setRewardRedeemed(result.data.redeemed)
+      setRewardCode(result.data.code || '')
+    } catch (claimError) {
+      const message =
+        typeof claimError === 'object' && claimError !== null && 'message' in claimError
+          ? String((claimError as { message?: unknown }).message || '')
+          : ''
+      setRewardError(
+        message.replace(/^FirebaseError:\s*/i, '') ||
+          'The Quill & Circle reward code could not be created.',
+      )
+    } finally {
+      setRewardBusy(false)
+    }
+  }
 
   const currentRank = useMemo(
     () => entries.findIndex((entry) => entry.uid === currentUid) + 1,
@@ -129,6 +187,44 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
             <strong>#{currentRank}</strong>
             <small>{entries[currentRank - 1]?.xp ?? 0} XP</small>
           </div>
+        )}
+
+        {currentUid && (
+          <section className={currentXp >= 200 ? 'crossgame-reward unlocked' : 'crossgame-reward'}>
+            <div className="crossgame-reward-copy">
+              <span className="card-label">200 XP CROSS-GAME REWARD</span>
+              <strong>DANJI Operator Hat</strong>
+              <p>
+                Reach 200 DANJI XP to unlock this exclusive cosmetic in Quill & Circle.
+                Your progress: {Math.min(currentXp, 200)} / 200 XP.
+              </p>
+              <div className="crossgame-progress">
+                <i style={{ width: `${Math.min(100, (currentXp / 200) * 100)}%` }} />
+              </div>
+            </div>
+
+            <div className="crossgame-reward-action">
+              {rewardRedeemed ? (
+                <span className="crossgame-claimed">CLAIMED IN QUILL & CIRCLE ✓</span>
+              ) : currentXp >= 200 ? (
+                <>
+                  <button type="button" onClick={getQasReward} disabled={rewardBusy}>
+                    {rewardBusy ? 'CREATING CODE…' : rewardCode ? 'REFRESH CODE' : 'GET Q&C CLAIM CODE'}
+                  </button>
+                  {rewardCode && (
+                    <div className="crossgame-code">
+                      <span>YOUR ONE-TIME CODE</span>
+                      <code>{rewardCode}</code>
+                      <small>Open Quill & Circle → Cloud & Profile → DANJI Reward and enter this code.</small>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span className="crossgame-locked">{200 - currentXp} XP TO GO</span>
+              )}
+              {rewardError && <p className="crossgame-error">{rewardError}</p>}
+            </div>
+          </section>
         )}
 
         {loading ? (
