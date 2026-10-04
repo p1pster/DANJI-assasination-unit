@@ -1,5 +1,14 @@
 {
   "projects": {
     "default": "danji-9b4ff"
+  },
+  "targets": {
+    "danji-9b4ff": {
+      "hosting": {
+        "danji": [
+          "danji"
+        ]
+      }
+    }
   }
 }
