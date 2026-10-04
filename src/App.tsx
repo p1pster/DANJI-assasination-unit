@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
-import {
-  GoogleAuthProvider,
-  onAuthStateChanged,
-  signInWithPopup,
-  signInWithRedirect,
-  signOut,
-} from 'firebase/auth'
+import { onAuthStateChanged } from 'firebase/auth'
 import { httpsCallable } from 'firebase/functions'
 import { auth, functions } from './firebase'
 import EthicalHacking from './EthicalHacking'
 import Leaderboard from './Leaderboard'
+import Recruitment from './Recruitment'
 import './App.css'
 
 type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
@@ -70,43 +65,6 @@ function App() {
       }),
     [],
   )
-
-  const handleGoogleSignIn = async () => {
-    setAssistantError('')
-    const provider = new GoogleAuthProvider()
-    provider.setCustomParameters({ prompt: 'select_account' })
-
-    try {
-      await signInWithPopup(auth, provider)
-    } catch (error) {
-      const code =
-        typeof error === 'object' && error !== null && 'code' in error
-          ? String((error as { code?: unknown }).code || '')
-          : ''
-
-      if (code === 'auth/popup-blocked' || code === 'auth/cancelled-popup-request') {
-        try {
-          await signInWithRedirect(auth, provider)
-          return
-        } catch {
-          setAssistantError('Google sign-in was blocked by the browser. Allow redirects/pop-ups for danji.web.app and try again.')
-          return
-        }
-      }
-
-      if (code === 'auth/unauthorized-domain') {
-        setAssistantError('Google sign-in is not authorised for danji.web.app yet. Add danji.web.app in Firebase Authentication → Settings → Authorized domains.')
-        return
-      }
-
-      if (code === 'auth/operation-not-allowed') {
-        setAssistantError('Google sign-in is disabled in Firebase. Enable Google under Authentication → Sign-in method.')
-        return
-      }
-
-      setAssistantError(`Google sign-in failed${code ? ` (${code})` : ''}. Check Firebase Authentication settings.`)
-    }
-  }
 
   const handleSend = async (event: FormEvent) => {
     event.preventDefault()
@@ -420,94 +378,10 @@ function App() {
           </div>
         </section>
       ) : activeTab === 'recruitment' ? (
-        <section className="recruitment-page">
-          <div className="recruitment-wrap">
-            <div className="eyebrow">
-              <span>03</span>
-              RECRUITMENT
-            </div>
-
-            <div className="recruitment-hero">
-              <p className="kicker">DANJI // MEMBER ACCESS</p>
-              <h1>Join DANJI.</h1>
-              <p>
-                Become a DANJI member to unlock Tomori and future member-only
-                systems as they come online.
-              </p>
-            </div>
-
-            <div className="recruitment-grid">
-              <article className="recruitment-card recruitment-card-main">
-                <span className="card-label">MEMBERSHIP STATUS</span>
-                {user ? (
-                  <>
-                    <div className="member-status-line">
-                      <span className="status-dot" />
-                      ACTIVE MEMBER
-                    </div>
-                    <h2>{user.displayName || 'DANJI Member'}</h2>
-                    <p>{user.email || 'Google account connected'}</p>
-                    <div className="recruitment-actions">
-                      <button
-                        className="recruitment-primary"
-                        type="button"
-                        onClick={() => setActiveTab('assistant')}
-                      >
-                        TALK TO TOMORI
-                        <span>↗</span>
-                      </button>
-                      <button
-                        className="recruitment-secondary"
-                        type="button"
-                        onClick={() => signOut(auth)}
-                      >
-                        SIGN OUT
-                      </button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="member-status-line muted">
-                      <span className="status-dot idle" />
-                      NOT A MEMBER
-                    </div>
-                    <h2>Become a DANJI member.</h2>
-                    <p>
-                      Sign in with Google to create or access your DANJI membership.
-                      Your Firebase account is used to identify you securely.
-                    </p>
-                    <button
-                      className="recruitment-primary google-login"
-                      type="button"
-                      onClick={handleGoogleSignIn}
-                    >
-                      <span className="google-mark">G</span>
-                      SIGN IN WITH GOOGLE
-                      <span>↗</span>
-                    </button>
-                  </>
-                )}
-
-                {assistantError && (
-                  <div className="recruitment-error">{assistantError}</div>
-                )}
-              </article>
-
-              <aside className="recruitment-card recruitment-info">
-                <span className="card-label">MEMBER ACCESS</span>
-                <strong>TOMORI // ENABLED</strong>
-                <p>
-                  Membership gives you authenticated access to Tomori. More DANJI
-                  member systems can be added here later.
-                </p>
-                <div className="recruitment-rule" />
-                <span className="recruitment-note">
-                  ONE DANJI ID // GOOGLE AUTHENTICATION
-                </span>
-              </aside>
-            </div>
-          </div>
-        </section>
+        <Recruitment
+          user={user}
+          onOpenTomori={() => setActiveTab('assistant')}
+        />
       ) : activeTab === 'leaderboard' ? (
         <Leaderboard
           currentUid={user?.uid}
