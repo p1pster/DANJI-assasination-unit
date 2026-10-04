@@ -100,7 +100,22 @@ exports.danjiAssistant = onCall(
 
     await enforceRateLimit(request.auth.uid);
 
-    const client = new OpenAI({ apiKey: openAiKey.value() });
+    let apiKey = openAiKey.value().trim();
+
+    // Be forgiving if the secret was pasted with quotes or a Bearer prefix.
+    apiKey = apiKey
+      .replace(/^Bearer\s+/i, "")
+      .replace(/^["']|["']$/g, "")
+      .trim();
+
+    if (!apiKey.startsWith("sk-")) {
+      throw new HttpsError(
+        "failed-precondition",
+        "OPENAI_API_KEY is not in a valid OpenAI API key format. Create a key at the OpenAI API key page and save only the key value in Firebase.",
+      );
+    }
+
+    const client = new OpenAI({ apiKey });
 
     try {
       const response = await client.responses.create({
@@ -146,9 +161,21 @@ exports.danjiAssistant = onCall(
       const apiCode = error && error.code;
 
       if (status === 401) {
+        if (apiCode === "ip_not_authorized" || (error && error.type === "ip_not_authorized")) {
+          throw new HttpsError(
+            "permission-denied",
+            "OpenAI rejected Tomori because API IP allowlisting is enabled and the Firebase function IP is not allowed.",
+          );
+        }
+
+        const safeAuthCode =
+          typeof apiCode === "string" && apiCode.length < 80
+            ? ` (${apiCode})`
+            : "";
+
         throw new HttpsError(
           "failed-precondition",
-          "Tomori's OpenAI API key was rejected. Create a valid API key and update OPENAI_API_KEY in Firebase.",
+          `OpenAI rejected Tomori's authentication${safeAuthCode}. Check that the Firebase secret contains the current API key and not an old/revoked key.`,
         );
       }
 
