@@ -460,7 +460,67 @@ const QAS_WELLDONE_THRESHOLDS = [
   ...geometricThresholds(QAS_WELLDONE_COUNT - 1, 400, QAS_REWARD_MAX_XP),
 ];
 
-const QAS_MASK_THRESHOLDS = geometricThresholds(
+function roundedMaskThreshold(value) {
+  const step =
+    value < 1_000
+      ? 50
+      : value < 10_000
+        ? 250
+        : value < 100_000
+          ? 1_000
+          : value < 1_000_000
+            ? 5_000
+            : value < 10_000_000
+              ? 50_000
+              : value < 100_000_000
+                ? 500_000
+                : value < 1_000_000_000
+                  ? 5_000_000
+                  : 50_000_000;
+
+  return Math.max(400, Math.round(value / step) * step);
+}
+
+function improvedMaskThresholds(count, start, end) {
+  if (count <= 1) return [Math.round(start)];
+  const ratio = Math.pow(end / start, 1 / (count - 1));
+  const values = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const raw =
+      index === count - 1 ? end : start * Math.pow(ratio, index);
+    let value =
+      index === count - 1 ? end : roundedMaskThreshold(raw);
+
+    if (values.length && value <= values[values.length - 1]) {
+      const previous = values[values.length - 1];
+      const step =
+        previous < 1_000
+          ? 50
+          : previous < 10_000
+            ? 250
+            : previous < 100_000
+              ? 1_000
+              : previous < 1_000_000
+                ? 5_000
+                : previous < 10_000_000
+                  ? 50_000
+                  : previous < 100_000_000
+                    ? 500_000
+                    : previous < 1_000_000_000
+                      ? 5_000_000
+                      : 50_000_000;
+      value = previous + step;
+    }
+
+    values.push(value);
+  }
+
+  values[values.length - 1] = end;
+  return values;
+}
+
+const QAS_MASK_THRESHOLDS = improvedMaskThresholds(
   QAS_BONUS_MASK_COUNT,
   400,
   QAS_REWARD_MAX_XP,
