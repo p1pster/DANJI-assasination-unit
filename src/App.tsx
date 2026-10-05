@@ -9,7 +9,7 @@ import Recruitment from './Recruitment'
 import SeriaTracker from './SeriaTracker'
 import './App.css'
 
-type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'seria' | 'minecraft' | 'ethical' | 'briefing' | 'archive'
+type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'seria' | 'minecraft' | 'valorant' | 'ethical' | 'briefing' | 'archive'
 type TomoriEmotion =
   | 'neutral'
   | 'happy'
@@ -179,6 +179,13 @@ function App() {
             onClick={() => setActiveTab('minecraft')}
           >
             Minecraft
+          </button>
+          <button
+            className={activeTab === 'valorant' ? 'tab active valorant-tab' : 'tab valorant-tab'}
+            type="button"
+            onClick={() => setActiveTab('valorant')}
+          >
+            Valorant
           </button>
           <button
             className={activeTab === 'ethical' ? 'tab active' : 'tab'}
@@ -424,12 +431,24 @@ function App() {
             <span>Servers, builds, tools, maps and DANJI Minecraft projects will live here.</span>
           </div>
         </section>
+      ) : activeTab === 'valorant' ? (
+        <section className="placeholder-page valorant-page">
+          <div className="eyebrow">
+            <span>07</span>
+            VALORANT
+          </div>
+          <div className="placeholder-content">
+            <p>TACTICAL NODE // READY</p>
+            <h1>Valorant</h1>
+            <span>Agents, maps, loadouts, clips, stats and DANJI Valorant tools will live here.</span>
+          </div>
+        </section>
       ) : activeTab === 'ethical' ? (
         <EthicalHacking />
       ) : (
         <section className="placeholder-page">
           <div className="eyebrow">
-            <span>{activeTab === 'briefing' ? '08' : '09'}</span>
+            <span>{activeTab === 'briefing' ? '09' : '10'}</span>
             {activeTab.toUpperCase()}
           </div>
           <div className="placeholder-content">
