@@ -3675,3 +3675,86 @@ button.ethical-tool-card.active .ethical-tool-marker {
     text-align: center;
   }
 }
+
+
+.crossgame-code-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.crossgame-code-actions button,
+.crossgame-code-actions a {
+  min-height: 38px;
+  display: grid;
+  place-items: center;
+  padding: 0 10px;
+  border: 1px solid rgba(174,35,59,.40);
+  background: rgba(142,18,41,.14);
+  color: #dfbbc2;
+  text-decoration: none;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+
+.crossgame-code-actions button:hover,
+.crossgame-code-actions a:hover {
+  border-color: #ad243d;
+  background: #8e152a;
+  color: #fff;
+}
+
+.crossgame-instructions {
+  margin-top: 14px;
+  padding: 15px 16px;
+  border: 1px solid rgba(177,36,61,.24);
+  background: linear-gradient(135deg, rgba(135,18,39,.10), rgba(255,255,255,.012));
+}
+
+.crossgame-instructions > strong {
+  display: block;
+  color: #e4c8cd;
+  font-size: 9px;
+  letter-spacing: .14em;
+}
+
+.crossgame-instructions > p {
+  margin: 9px 0 10px;
+  color: #8b7d81;
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.crossgame-instructions ol {
+  margin: 0;
+  padding-left: 20px;
+  color: #a99da0;
+  font-size: 9px;
+  line-height: 1.75;
+}
+
+.crossgame-instructions li::marker {
+  color: #c52a43;
+  font-weight: 900;
+}
+
+.crossgame-instructions b {
+  color: #ddd3d5;
+}
+
+.crossgame-instructions > small {
+  display: block;
+  margin-top: 11px;
+  color: #6d6265;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+@media (max-width: 620px) {
+  .crossgame-code-actions {
+    grid-template-columns: 1fr;
+  }
+}
