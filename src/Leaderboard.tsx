@@ -132,6 +132,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
   const [lastClaimedXp, setLastClaimedXp] = useState(0)
   const [rewardBusy, setRewardBusy] = useState(false)
   const [rewardError, setRewardError] = useState('')
+  const [rewardCopied, setRewardCopied] = useState(false)
   const [timedClaims, setTimedClaims] = useState<Record<string, number>>({})
   const [claimingTimedReward, setClaimingTimedReward] = useState<TimedRewardId | null>(null)
   const [timedRewardMessage, setTimedRewardMessage] = useState('')
@@ -266,6 +267,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
 
       const result = await claim({})
       setRewardCode(result.data.code || '')
+      setRewardCopied(false)
     } catch (claimError) {
       const message =
         typeof claimError === 'object' && claimError !== null && 'message' in claimError
@@ -444,12 +446,48 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                       <div className="crossgame-code">
                         <span>YOUR ONE-TIME CODE</span>
                         <code>{rewardCode}</code>
-                        <small>
-                          Open Quill & Circle → Cloud & Profile → DANJI Rewards. The code
-                          grants every Weldone emote and mask your current score has earned.
-                        </small>
+                        <div className="crossgame-code-actions">
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              try {
+                                await navigator.clipboard.writeText(rewardCode)
+                                setRewardCopied(true)
+                              } catch {
+                                setRewardCopied(false)
+                              }
+                            }}
+                          >
+                            {rewardCopied ? 'COPIED ✓' : 'COPY CODE'}
+                          </button>
+                          <a
+                            href="https://quill-and-circle.web.app"
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            OPEN QAS ↗
+                          </a>
+                        </div>
                       </div>
                     )}
+                    <div className="crossgame-instructions">
+                      <strong>HOW TO UNLOCK THEM IN QAS</strong>
+                      <p>
+                        Reaching the point target unlocks the reward in DANJI, but you still
+                        need to sync it to your Quill & Circle account.
+                      </p>
+                      <ol>
+                        <li>Press <b>GET LATEST Q&C REWARDS</b> above.</li>
+                        <li>Copy the complete <b>DANJI-QC-...</b> code.</li>
+                        <li>Open QAS and sign in to the account you want the rewards on.</li>
+                        <li>Open the side menu → <b>Cloud & Profile</b>.</li>
+                        <li>Find <b>DANJI REWARD TRACK</b>, paste the code and press <b>Sync DANJI rewards</b>.</li>
+                        <li>Go back to <b>Apprentice → Hat</b>. Your earned masks should be unlocked immediately.</li>
+                      </ol>
+                      <small>
+                        You only need to sync again after earning new DANJI point milestones.
+                      </small>
+                    </div>
                   </>
                 ) : (
                   <span className="crossgame-locked">{200 - currentXp} POINTS TO FIRST REWARD</span>
