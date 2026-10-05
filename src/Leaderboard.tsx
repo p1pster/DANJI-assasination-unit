@@ -100,7 +100,76 @@ const WELLDONE_THRESHOLDS = [
   200,
   ...geometricThresholds(99, 400, 10_000_000_000),
 ]
-const MASK_THRESHOLDS = geometricThresholds(84, 400, 10_000_000_000)
+const roundedMaskThreshold = (value: number) => {
+  const step =
+    value < 1_000
+      ? 50
+      : value < 10_000
+        ? 250
+        : value < 100_000
+          ? 1_000
+          : value < 1_000_000
+            ? 5_000
+            : value < 10_000_000
+              ? 50_000
+              : value < 100_000_000
+                ? 500_000
+                : value < 1_000_000_000
+                  ? 5_000_000
+                  : 50_000_000
+
+  return Math.max(400, Math.round(value / step) * step)
+}
+
+const improvedMaskThresholds = (count: number, start: number, end: number) => {
+  if (count <= 1) return [Math.round(start)]
+  const ratio = Math.pow(end / start, 1 / (count - 1))
+  const values: number[] = []
+
+  for (let index = 0; index < count; index += 1) {
+    const raw = index === count - 1 ? end : start * Math.pow(ratio, index)
+    let value = index === count - 1 ? end : roundedMaskThreshold(raw)
+
+    if (values.length && value <= values[values.length - 1]) {
+      const previous = values[values.length - 1]
+      const step =
+        previous < 1_000
+          ? 50
+          : previous < 10_000
+            ? 250
+            : previous < 100_000
+              ? 1_000
+              : previous < 1_000_000
+                ? 5_000
+                : previous < 10_000_000
+                  ? 50_000
+                  : previous < 100_000_000
+                    ? 500_000
+                    : previous < 1_000_000_000
+                      ? 5_000_000
+                      : 50_000_000
+      value = previous + step
+    }
+
+    values.push(value)
+  }
+
+  values[values.length - 1] = end
+  return values
+}
+
+const MASK_THRESHOLDS = improvedMaskThresholds(84, 400, 10_000_000_000)
+
+const maskRarity = (maskNumber: number) => {
+  if (maskNumber >= 85) return 'APEX'
+  if (maskNumber >= 79) return 'RELIC'
+  if (maskNumber >= 69) return 'MYTHIC'
+  if (maskNumber >= 56) return 'LEGENDARY'
+  if (maskNumber >= 41) return 'EPIC'
+  if (maskNumber >= 26) return 'ELITE'
+  if (maskNumber >= 11) return 'RARE'
+  return 'FIELD'
+}
 
 const rewardCountsForXp = (xp: number) => ({
   emotes: WELLDONE_THRESHOLDS.filter((threshold) => xp >= threshold).length,
@@ -410,10 +479,16 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                 <span className="card-label">QUILL & CIRCLE REWARD TRACK</span>
                 <strong>Weldone Collection</strong>
                 <p>
-                  Your DANJI score now unlocks 100 ordered Weldone emotes and a collection
-                  of mask cosmetics in Quill & Circle. Rewards begin at 200 points and the
-                  final prestige rewards sit at 10,000,000,000 points.
+                  Your DANJI score unlocks 100 ordered Weldone emotes and an upgraded
+                  85-mask collection in Quill & Circle. Mask milestones are now cleaner,
+                  more generous early on, and rise through FIELD, RARE, ELITE, EPIC,
+                  LEGENDARY, MYTHIC, RELIC and APEX tiers.
                 </p>
+                <div className="mask-tier-strip">
+                  {['FIELD','RARE','ELITE','EPIC','LEGENDARY','MYTHIC','RELIC','APEX'].map((tier) => (
+                    <span className={`mask-tier ${tier.toLowerCase()}`} key={tier}>{tier}</span>
+                  ))}
+                </div>
                 <div className="crossgame-reward-totals">
                   <span><b>{rewards.emotes}</b> / 100 EMOTES</span>
                   <span><b>{rewards.masks}</b> / 85 MASKS</span>
@@ -421,9 +496,15 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                 {nextThreshold ? (
                   <small className="crossgame-next">
                     NEXT REWARD // {nextThreshold.toLocaleString()} POINTS
+                    {(() => {
+                      const nextMaskIndex = MASK_THRESHOLDS.findIndex((threshold) => threshold > currentXp)
+                      if (nextMaskIndex < 0 || MASK_THRESHOLDS[nextMaskIndex] !== nextThreshold) return ''
+                      const maskNumber = nextMaskIndex + 2
+                      return ` // MASK ${String(maskNumber).padStart(3, '0')} · ${maskRarity(maskNumber)}`
+                    })()}
                   </small>
                 ) : (
-                  <small className="crossgame-next complete">ALL REWARDS UNLOCKED</small>
+                  <small className="crossgame-next complete">ALL REWARDS UNLOCKED · APEX COMPLETE</small>
                 )}
               </div>
 
