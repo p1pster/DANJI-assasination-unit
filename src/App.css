@@ -3758,3 +3758,35 @@ button.ethical-tool-card.active .ethical-tool-marker {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* Upgraded DANJI mask reward tiers */
+.mask-tier-strip {
+  margin: 14px 0 2px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mask-tier {
+  padding: 5px 7px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: rgba(255,255,255,.018);
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .1em;
+  opacity: .82;
+}
+
+.mask-tier.field { color: #8e989d; }
+.mask-tier.rare { color: #67b6ff; }
+.mask-tier.elite { color: #67dec2; }
+.mask-tier.epic { color: #c590ff; }
+.mask-tier.legendary { color: #ffc766; }
+.mask-tier.mythic { color: #ff718f; }
+.mask-tier.relic { color: #efeff5; }
+.mask-tier.apex {
+  color: #ff3654;
+  box-shadow: 0 0 14px rgba(255,54,84,.14);
+}
