@@ -62,7 +62,7 @@ function EthicalHacking() {
     <section className="ethical-page">
       <div className="ethical-heading">
         <div className="eyebrow">
-          <span>07</span>
+          <span>08</span>
           ETHICAL HACKING
         </div>
         <div className="ethical-title-row">
