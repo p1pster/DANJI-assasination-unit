@@ -373,7 +373,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
             <h1>Leaderboard.</h1>
             <p>
               First login awards 100 XP, creating the DANJI membership adds 25 XP,
-              linked sign-in methods add 25 XP each, and successful Tomori replies
+              linked sign-in methods add 25 XP each, and successful Sasha replies
               currently award 5 XP.
             </p>
           </div>
@@ -626,7 +626,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                 <span>RANK</span>
                 <span>MEMBER</span>
                 <span>TIER</span>
-                <span>TOMORI</span>
+                <span>SASHA</span>
                 <span>XP</span>
               </div>
 
@@ -666,7 +666,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
               </div>
               <div>
                 <strong>+5</strong>
-                <small>SUCCESSFUL TOMORI REPLY</small>
+                <small>SUCCESSFUL SASHA REPLY</small>
               </div>
               <p>Provider-link bonuses are awarded once per supported sign-in method and verified by the server.</p>
             </div>
