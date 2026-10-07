@@ -420,15 +420,117 @@ function App() {
       ) : activeTab === 'seria' ? (
         <SeriaTracker />
       ) : activeTab === 'minecraft' ? (
-        <section className="placeholder-page">
-          <div className="eyebrow">
-            <span>06</span>
-            MINECRAFT
-          </div>
-          <div className="placeholder-content">
-            <p>GAME NODE // READY</p>
-            <h1>Minecraft</h1>
-            <span>Servers, builds, tools, maps and DANJI Minecraft projects will live here.</span>
+        <section className="minecraft-page">
+          <div className="minecraft-wrap">
+            <div className="eyebrow">
+              <span>06</span>
+              MINECRAFT
+            </div>
+
+            <div className="minecraft-heading">
+              <div>
+                <p className="kicker">DANJI BEDROCK NODE // LIVE</p>
+                <h1>Minecraft.</h1>
+                <p>
+                  Join the official DANJI Bedrock server using either the direct IP
+                  or the ScalaCube domain below.
+                </p>
+              </div>
+              <div className="minecraft-edition-badge">
+                <span>▦</span>
+                <strong>BEDROCK</strong>
+                <small>DANJI SERVER</small>
+              </div>
+            </div>
+
+            <div className="minecraft-server-grid">
+              <article className="minecraft-server-card primary">
+                <span className="card-label">DIRECT CONNECTION</span>
+                <h2>DANJI Bedrock Server</h2>
+                <div className="minecraft-server-field">
+                  <small>SERVER ADDRESS</small>
+                  <code>5.9.151.142</code>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText('5.9.151.142')}
+                  >
+                    COPY IP
+                  </button>
+                </div>
+                <div className="minecraft-server-field">
+                  <small>PORT</small>
+                  <code>2391</code>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText('2391')}
+                  >
+                    COPY PORT
+                  </button>
+                </div>
+                <div className="minecraft-server-combined">
+                  <span>FULL ADDRESS</span>
+                  <strong>5.9.151.142:2391</strong>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText('5.9.151.142:2391')}
+                  >
+                    COPY FULL ADDRESS
+                  </button>
+                </div>
+              </article>
+
+              <article className="minecraft-server-card">
+                <span className="card-label">DOMAIN CONNECTION</span>
+                <h2>ScalaCube Domain</h2>
+                <div className="minecraft-server-field">
+                  <small>SERVER ADDRESS</small>
+                  <code>a16eyftxek.scalacube.pro</code>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText('a16eyftxek.scalacube.pro')}
+                  >
+                    COPY DOMAIN
+                  </button>
+                </div>
+                <div className="minecraft-server-field">
+                  <small>PORT</small>
+                  <code>2391</code>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText('2391')}
+                  >
+                    COPY PORT
+                  </button>
+                </div>
+                <div className="minecraft-server-combined">
+                  <span>FULL DOMAIN</span>
+                  <strong>a16eyftxek.scalacube.pro:2391</strong>
+                  <button
+                    type="button"
+                    onClick={() => void navigator.clipboard.writeText('a16eyftxek.scalacube.pro:2391')}
+                  >
+                    COPY FULL DOMAIN
+                  </button>
+                </div>
+              </article>
+            </div>
+
+            <section className="minecraft-join-guide">
+              <span className="card-label">HOW TO JOIN</span>
+              <div className="minecraft-join-steps">
+                <div><b>01</b><span>Open Minecraft Bedrock Edition.</span></div>
+                <div><b>02</b><span>Choose Play → Servers → Add Server.</span></div>
+                <div><b>03</b><span>Enter either server address shown above.</span></div>
+                <div><b>04</b><span>Set the port to <strong>2391</strong>, save it, then join.</span></div>
+              </div>
+            </section>
+
+            <div className="minecraft-server-note">
+              <strong>BEDROCK EDITION</strong>
+              <span>
+                Server: 5.9.151.142:2391 · Domain: a16eyftxek.scalacube.pro:2391
+              </span>
+            </div>
           </div>
         </section>
       ) : activeTab === 'valorant' ? (
