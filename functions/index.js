@@ -843,7 +843,7 @@ exports.danjiAssistant = onCall(
   },
   async (request) => {
     if (!request.auth) {
-      throw new HttpsError("unauthenticated", "Sign in to talk to Tomori.");
+      throw new HttpsError("unauthenticated", "Sign in to talk to Sasha.");
     }
 
     const rawMessages = request.data && request.data.messages;
@@ -898,7 +898,7 @@ exports.danjiAssistant = onCall(
       const response = await client.responses.create({
         model: "gpt-6-luna",
         instructions:
-          'You are Tomori, the built-in AI assistant for the DANJI web system. Be concise, capable, calm, expressive and practical. Help with questions, planning, writing, explanations and navigating DANJI. Never pretend you completed an action you did not actually perform. For every response, choose exactly one reaction from: neutral, happy, excited, crying, shy, confused, angry, working, love, drink, sleepy, cool, shocked, thinking, food, cute. Pick the reaction that best matches your emotional tone or what you are doing: use working for active task/help, thinking for analysis, confused for genuine uncertainty, angry only when the tone really fits, sleepy for sleep/tired topics, food or drink when those are central, love or cute for affectionate/cute moments, cool for confident success, shocked for surprising information, crying for sadness, shy for bashful moments, excited for strong enthusiasm, happy for ordinary positive replies, and neutral otherwise. Return ONLY valid JSON with exactly this shape and no markdown: {"reply":"your response","emotion":"one_allowed_reaction"}.',
+          'You are Sasha, the built-in AI assistant for the DANJI web system. Be concise, capable, calm, expressive and practical. Help with questions, planning, writing, explanations and navigating DANJI. Never pretend you completed an action you did not actually perform. For every response, choose exactly one reaction from: neutral, happy, excited, crying, shy, confused, angry, working, love, drink, sleepy, cool, shocked, thinking, food, cute. Pick the reaction that best matches your emotional tone or what you are doing: use working for active task/help, thinking for analysis, confused for genuine uncertainty, angry only when the tone really fits, sleepy for sleep/tired topics, food or drink when those are central, love or cute for affectionate/cute moments, cool for confident success, shocked for surprising information, crying for sadness, shy for bashful moments, excited for strong enthusiasm, happy for ordinary positive replies, and neutral otherwise. Return ONLY valid JSON with exactly this shape and no markdown: {"reply":"your response","emotion":"one_allowed_reaction"}.',
         input: messages,
         max_output_tokens: 900,
       });
@@ -927,7 +927,7 @@ exports.danjiAssistant = onCall(
         }
       } catch {
         // Some models may append the emotion object after a normal reply.
-        // Pull that metadata out so users never see raw JSON in Tomori's message.
+        // Pull that metadata out so users never see raw JSON in Sasha's message.
         const emotionObjectMatch = cleaned.match(
           /\{\s*"emotion"\s*:\s*"([^"]+)"\s*\}\s*$/,
         );
@@ -959,7 +959,7 @@ exports.danjiAssistant = onCall(
 
       return { reply, emotion };
     } catch (error) {
-      console.error("Tomori OpenAI error", {
+      console.error("Sasha OpenAI error", {
         status: error && error.status,
         code: error && error.code,
         type: error && error.type,
@@ -974,7 +974,7 @@ exports.danjiAssistant = onCall(
         if (apiCode === "ip_not_authorized" || (error && error.type === "ip_not_authorized")) {
           throw new HttpsError(
             "permission-denied",
-            "OpenAI rejected Tomori because API IP allowlisting is enabled and the Firebase function IP is not allowed.",
+            "OpenAI rejected Sasha because API IP allowlisting is enabled and the Firebase function IP is not allowed.",
           );
         }
 
@@ -985,21 +985,21 @@ exports.danjiAssistant = onCall(
 
         throw new HttpsError(
           "failed-precondition",
-          `OpenAI rejected Tomori's authentication${safeAuthCode}. Check that the Firebase secret contains the current API key and not an old/revoked key.`,
+          `OpenAI rejected Sasha's authentication${safeAuthCode}. Check that the Firebase secret contains the current API key and not an old/revoked key.`,
         );
       }
 
       if (status === 403) {
         throw new HttpsError(
           "permission-denied",
-          "This OpenAI API project does not currently have access to the selected Tomori model.",
+          "This OpenAI API project does not currently have access to the selected Sasha model.",
         );
       }
 
       if (status === 404) {
         throw new HttpsError(
           "failed-precondition",
-          "Tomori's selected AI model is not available to this OpenAI API project.",
+          "Sasha's selected AI model is not available to this OpenAI API project.",
         );
       }
 
@@ -1010,15 +1010,15 @@ exports.danjiAssistant = onCall(
           apiCode === "organization_spend_limit_exceeded" ||
           apiCode === "project_spend_limit_exceeded" ||
           (error && error.type === "insufficient_quota")
-            ? "Tomori's OpenAI API account has no available credit or has reached a spending limit. Check API billing and credits."
-            : "Tomori is being rate-limited by the OpenAI API. Try again shortly.";
+            ? "Sasha's OpenAI API account has no available credit or has reached a spending limit. Check API billing and credits."
+            : "Sasha is being rate-limited by the OpenAI API. Try again shortly.";
 
         throw new HttpsError("resource-exhausted", quotaMessage);
       }
 
       throw new HttpsError(
         "internal",
-        "Tomori reached the AI service but received an unexpected error. Check the Firebase function logs for danjiAssistant.",
+        "Sasha reached the AI service but received an unexpected error. Check the Firebase function logs for danjiAssistant.",
       );
     }
   },
