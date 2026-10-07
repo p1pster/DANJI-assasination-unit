@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import { onAuthStateChanged } from 'firebase/auth'
+import { doc, onSnapshot } from 'firebase/firestore'
 import { httpsCallable } from 'firebase/functions'
-import { auth, functions } from './firebase'
+import { auth, db, functions } from './firebase'
 import EthicalHacking from './EthicalHacking'
 import Leaderboard from './Leaderboard'
 import Recruitment from './Recruitment'
@@ -34,6 +35,54 @@ type ChatMessage = {
   emotion?: SashaEmotion
 }
 
+type MinecraftEduState = {
+  symbols: string[]
+  online: boolean
+  updatedAtMs: number | null
+}
+
+type MinecraftEduStatusResponse = {
+  symbols?: string[]
+  online?: boolean
+  updatedAtMs?: number | null
+  canEdit?: boolean
+}
+
+const minecraftJoinSymbols = [
+  ['apple', '🍎', 'Apple'],
+  ['book', '📕', 'Book'],
+  ['pickaxe', '⛏️', 'Pickaxe'],
+  ['sword', '🗡️', 'Sword'],
+  ['cake', '🎂', 'Cake'],
+  ['creeper', '🟩', 'Creeper'],
+  ['diamond', '💎', 'Diamond'],
+  ['emerald', '🟢', 'Emerald'],
+  ['tnt', '🧨', 'TNT'],
+  ['torch', '🔥', 'Torch'],
+  ['potion', '🧪', 'Potion'],
+  ['bow', '🏹', 'Bow'],
+  ['fish', '🐟', 'Fish'],
+  ['chicken', '🐔', 'Chicken'],
+  ['pig', '🐷', 'Pig'],
+  ['wolf', '🐺', 'Wolf'],
+  ['fox', '🦊', 'Fox'],
+  ['panda', '🐼', 'Panda'],
+  ['bee', '🐝', 'Bee'],
+  ['flower', '🌸', 'Flower'],
+  ['carrot', '🥕', 'Carrot'],
+  ['redstone', '🔴', 'Redstone'],
+  ['skeleton', '💀', 'Skeleton'],
+  ['zombie', '🧟', 'Zombie'],
+  ['enderman', '🟪', 'Enderman'],
+  ['steve', '👤', 'Steve'],
+  ['alex', '🧑‍🦰', 'Alex'],
+  ['agent', '🤖', 'Agent'],
+] as const
+
+const minecraftJoinSymbol = (id: string) =>
+  minecraftJoinSymbols.find(([value]) => value === id) ??
+  (['unknown', '❔', id || 'Waiting'] as const)
+
 const starterMessages: ChatMessage[] = [
   {
     role: 'assistant',
@@ -51,6 +100,20 @@ function App() {
   const [isThinking, setIsThinking] = useState(false)
   const [assistantError, setAssistantError] = useState('')
   const [floatingAssistantOpen, setFloatingAssistantOpen] = useState(false)
+  const [minecraftEdu, setMinecraftEdu] = useState<MinecraftEduState>({
+    symbols: ['apple', 'book', 'pickaxe', 'diamond'],
+    online: false,
+    updatedAtMs: null,
+  })
+  const [minecraftEduDraft, setMinecraftEduDraft] = useState<string[]>([
+    'apple',
+    'book',
+    'pickaxe',
+    'diamond',
+  ])
+  const [minecraftEduCanEdit, setMinecraftEduCanEdit] = useState(false)
+  const [minecraftEduSaving, setMinecraftEduSaving] = useState(false)
+  const [minecraftEduMessage, setMinecraftEduMessage] = useState('')
 
   useEffect(
     () =>
@@ -66,6 +129,89 @@ function App() {
       }),
     [],
   )
+
+  useEffect(() => {
+    const ref = doc(db, 'danjiConfig', 'minecraftEducation')
+    return onSnapshot(
+      ref,
+      (snapshot) => {
+        if (!snapshot.exists()) return
+        const data = snapshot.data()
+        const symbols = Array.isArray(data.symbols)
+          ? data.symbols.filter((value): value is string => typeof value === 'string').slice(0, 4)
+          : []
+        const nextSymbols =
+          symbols.length === 4 ? symbols : ['apple', 'book', 'pickaxe', 'diamond']
+        const updatedAtMs =
+          data.updatedAt && typeof data.updatedAt.toMillis === 'function'
+            ? data.updatedAt.toMillis()
+            : null
+
+        setMinecraftEdu({
+          symbols: nextSymbols,
+          online: data.online === true,
+          updatedAtMs,
+        })
+        setMinecraftEduDraft(nextSymbols)
+      },
+      (error) => {
+        console.error('Minecraft Education live code subscription failed', error)
+      },
+    )
+  }, [])
+
+  useEffect(() => {
+    if (!user) {
+      setMinecraftEduCanEdit(false)
+      return
+    }
+
+    const getStatus = httpsCallable<void, MinecraftEduStatusResponse>(
+      functions,
+      'getMinecraftEducationJoin',
+    )
+
+    void getStatus()
+      .then((result) => {
+        setMinecraftEduCanEdit(result.data.canEdit === true)
+      })
+      .catch((error) => {
+        console.error('Minecraft Education admin check failed', error)
+        setMinecraftEduCanEdit(false)
+      })
+  }, [user])
+
+  const saveMinecraftEducationJoin = async (online = minecraftEdu.online) => {
+    if (!minecraftEduCanEdit || minecraftEduSaving) return
+
+    setMinecraftEduSaving(true)
+    setMinecraftEduMessage('')
+
+    try {
+      const updateJoin = httpsCallable<
+        { symbols: string[]; online: boolean },
+        { ok: boolean }
+      >(functions, 'updateMinecraftEducationJoin')
+
+      await updateJoin({
+        symbols: minecraftEduDraft.slice(0, 4),
+        online,
+      })
+
+      setMinecraftEduMessage('LIVE JOIN CODE UPDATED')
+    } catch (error) {
+      console.error(error)
+      const message =
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as { message?: unknown }).message || '')
+          : ''
+      setMinecraftEduMessage(
+        message.replace(/^FirebaseError:\s*/i, '') || 'UPDATE FAILED',
+      )
+    } finally {
+      setMinecraftEduSaving(false)
+    }
+  }
 
   const handleSend = async (event: FormEvent) => {
     event.preventDefault()
