@@ -11,6 +11,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    match /danjiConfig/minecraftEducation {
+      allow read: if true;
+      allow write: if false;
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }
