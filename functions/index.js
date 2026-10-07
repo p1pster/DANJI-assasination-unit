@@ -1023,3 +1023,132 @@ exports.danjiAssistant = onCall(
     }
   },
 );
+
+
+const MINECRAFT_EDU_DEFAULT_SYMBOLS = ["apple", "book", "pickaxe", "diamond"];
+const MINECRAFT_EDU_ALLOWED_SYMBOLS = new Set([
+  "apple", "book", "pickaxe", "sword", "cake", "creeper", "diamond", "emerald",
+  "tnt", "torch", "potion", "bow", "fish", "chicken", "pig", "wolf", "fox",
+  "panda", "bee", "flower", "carrot", "redstone", "skeleton", "zombie",
+  "enderman", "steve", "alex", "agent",
+]);
+
+async function isDanjiMinecraftAdmin(auth) {
+  if (!auth) return false;
+
+  const token = auth.token || {};
+  if (
+    token.admin === true ||
+    token.danjiAdmin === true ||
+    token.danji_admin === true
+  ) {
+    return true;
+  }
+
+  const member = await db.collection("danjiMembers").doc(auth.uid).get();
+  if (!member.exists) return false;
+
+  const role = String((member.data() || {}).role || "").trim().toLowerCase();
+  return ["owner", "admin", "full-admin", "full_admin"].includes(role);
+}
+
+function normalizeMinecraftEduSymbols(input) {
+  if (!Array.isArray(input) || input.length !== 4) {
+    throw new HttpsError(
+      "invalid-argument",
+      "Minecraft Education requires exactly four join-code symbols.",
+    );
+  }
+
+  const symbols = input.map((value) =>
+    typeof value === "string" ? value.trim().toLowerCase() : "",
+  );
+
+  if (symbols.some((value) => !MINECRAFT_EDU_ALLOWED_SYMBOLS.has(value))) {
+    throw new HttpsError(
+      "invalid-argument",
+      "One or more Minecraft Education symbols are not supported.",
+    );
+  }
+
+  return symbols;
+}
+
+exports.getMinecraftEducationJoin = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    const ref = db.collection("danjiConfig").doc("minecraftEducation");
+    const snapshot = await ref.get();
+    const data = snapshot.exists ? snapshot.data() || {} : {};
+    const rawSymbols = Array.isArray(data.symbols) ? data.symbols : [];
+    const symbols =
+      rawSymbols.length === 4 &&
+      rawSymbols.every(
+        (value) =>
+          typeof value === "string" &&
+          MINECRAFT_EDU_ALLOWED_SYMBOLS.has(value),
+      )
+        ? rawSymbols
+        : MINECRAFT_EDU_DEFAULT_SYMBOLS;
+
+    let canEdit = false;
+    if (request.auth) {
+      canEdit = await isDanjiMinecraftAdmin(request.auth);
+    }
+
+    return {
+      symbols,
+      online: data.online === true,
+      updatedAtMs:
+        data.updatedAt && typeof data.updatedAt.toMillis === "function"
+          ? data.updatedAt.toMillis()
+          : null,
+      canEdit,
+    };
+  },
+);
+
+exports.updateMinecraftEducationJoin = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in before updating the Minecraft Education join code.",
+      );
+    }
+
+    if (!(await isDanjiMinecraftAdmin(request.auth))) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only a DANJI admin can change the Minecraft Education join code.",
+      );
+    }
+
+    const symbols = normalizeMinecraftEduSymbols(
+      request.data && request.data.symbols,
+    );
+    const online = Boolean(request.data && request.data.online);
+
+    await db.collection("danjiConfig").doc("minecraftEducation").set(
+      {
+        symbols,
+        online,
+        updatedAt: FieldValue.serverTimestamp(),
+      },
+      { merge: true },
+    );
+
+    return { ok: true };
+  },
+);
