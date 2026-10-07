@@ -575,108 +575,199 @@ function App() {
 
             <div className="minecraft-heading">
               <div>
-                <p className="kicker">DANJI BEDROCK NODE // LIVE</p>
+                <p className="kicker">DANJI EDUCATION NODE // LIVE JOIN CODE</p>
                 <h1>Minecraft.</h1>
                 <p>
-                  Join the official DANJI Bedrock server using either the direct IP
-                  or the ScalaCube domain below.
+                  The current Minecraft Education picture code updates here live.
+                  Open Join World and click the four pictures in the same order.
                 </p>
               </div>
-              <div className="minecraft-edition-badge">
+              <div className={minecraftEdu.online ? 'minecraft-edition-badge online' : 'minecraft-edition-badge offline'}>
                 <span>▦</span>
-                <strong>BEDROCK</strong>
-                <small>DANJI SERVER</small>
+                <strong>EDUCATION</strong>
+                <small>{minecraftEdu.online ? 'WORLD ONLINE' : 'WORLD OFFLINE'}</small>
               </div>
             </div>
 
-            <div className="minecraft-server-grid">
-              <article className="minecraft-server-card primary">
-                <span className="card-label">DIRECT CONNECTION</span>
-                <h2>DANJI Bedrock Server</h2>
-                <div className="minecraft-server-field">
-                  <small>SERVER ADDRESS</small>
-                  <code>5.9.151.142</code>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText('5.9.151.142')}
-                  >
-                    COPY IP
-                  </button>
+            <section className="minecraft-edu-panel">
+              <div className="minecraft-edu-topline">
+                <div>
+                  <span className="card-label">CURRENT JOIN CODE</span>
+                  <h2>Click these four pictures in order</h2>
                 </div>
-                <div className="minecraft-server-field">
-                  <small>PORT</small>
-                  <code>2391</code>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText('2391')}
-                  >
-                    COPY PORT
-                  </button>
+                <div className={minecraftEdu.online ? 'minecraft-live-state online' : 'minecraft-live-state offline'}>
+                  <i />
+                  {minecraftEdu.online ? 'ONLINE' : 'OFFLINE'}
                 </div>
-                <div className="minecraft-server-combined">
-                  <span>FULL ADDRESS</span>
-                  <strong>5.9.151.142:2391</strong>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText('5.9.151.142:2391')}
-                  >
-                    COPY FULL ADDRESS
-                  </button>
-                </div>
-              </article>
-
-              <article className="minecraft-server-card">
-                <span className="card-label">DOMAIN CONNECTION</span>
-                <h2>ScalaCube Domain</h2>
-                <div className="minecraft-server-field">
-                  <small>SERVER ADDRESS</small>
-                  <code>a16eyftxek.scalacube.pro</code>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText('a16eyftxek.scalacube.pro')}
-                  >
-                    COPY DOMAIN
-                  </button>
-                </div>
-                <div className="minecraft-server-field">
-                  <small>PORT</small>
-                  <code>2391</code>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText('2391')}
-                  >
-                    COPY PORT
-                  </button>
-                </div>
-                <div className="minecraft-server-combined">
-                  <span>FULL DOMAIN</span>
-                  <strong>a16eyftxek.scalacube.pro:2391</strong>
-                  <button
-                    type="button"
-                    onClick={() => void navigator.clipboard.writeText('a16eyftxek.scalacube.pro:2391')}
-                  >
-                    COPY FULL DOMAIN
-                  </button>
-                </div>
-              </article>
-            </div>
-
-            <section className="minecraft-join-guide">
-              <span className="card-label">HOW TO JOIN</span>
-              <div className="minecraft-join-steps">
-                <div><b>01</b><span>Open Minecraft Bedrock Edition.</span></div>
-                <div><b>02</b><span>Choose Play → Servers → Add Server.</span></div>
-                <div><b>03</b><span>Enter either server address shown above.</span></div>
-                <div><b>04</b><span>Set the port to <strong>2391</strong>, save it, then join.</span></div>
               </div>
+
+              <div className="minecraft-symbol-code" aria-label="Current Minecraft Education join code">
+                {minecraftEdu.symbols.map((symbolId, index) => {
+                  const symbol = minecraftJoinSymbol(symbolId)
+                  return (
+                    <article className="minecraft-symbol-card" key={index}>
+                      <small>{String(index + 1).padStart(2, '0')}</small>
+                      <b aria-hidden="true">{symbol[1]}</b>
+                      <span>{symbol[2]}</span>
+                    </article>
+                  )
+                })}
+              </div>
+
+              <div className="minecraft-edu-meta">
+                <span>
+                  {minecraftEdu.updatedAtMs
+                    ? `UPDATED ${new Date(minecraftEdu.updatedAtMs).toLocaleString()}`
+                    : 'WAITING FOR FIRST HOST UPDATE'}
+                </span>
+                <strong>The code refreshes here automatically when the DANJI host changes it.</strong>
+              </div>
+
+              <section className="minecraft-edu-how">
+                <span className="card-label">JOIN FROM MINECRAFT EDUCATION</span>
+                <div>
+                  <p><b>01</b> Open Minecraft Education.</p>
+                  <p><b>02</b> Choose <strong>Play → Join World</strong>.</p>
+                  <p><b>03</b> Click the four pictures above in order.</p>
+                  <p><b>04</b> Join the DANJI world.</p>
+                </div>
+              </section>
+
+              {minecraftEduCanEdit && (
+                <section className="minecraft-host-controls">
+                  <div className="minecraft-host-heading">
+                    <div>
+                      <span className="card-label">HOST CONTROLS</span>
+                      <h3>Update the live Education code</h3>
+                    </div>
+                    <span>ADMIN</span>
+                  </div>
+
+                  <div className="minecraft-symbol-editors">
+                    {minecraftEduDraft.map((symbolId, index) => (
+                      <label key={index}>
+                        <small>SYMBOL {index + 1}</small>
+                        <select
+                          value={symbolId}
+                          onChange={(event) => {
+                            const next = [...minecraftEduDraft]
+                            next[index] = event.target.value
+                            setMinecraftEduDraft(next)
+                          }}
+                        >
+                          {minecraftJoinSymbols.map(([value, icon, label]) => (
+                            <option value={value} key={value}>
+                              {icon} {label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ))}
+                  </div>
+
+                  <div className="minecraft-host-actions">
+                    <button
+                      type="button"
+                      disabled={minecraftEduSaving}
+                      onClick={() => void saveMinecraftEducationJoin(true)}
+                    >
+                      SAVE CODE + SET ONLINE
+                    </button>
+                    <button
+                      className="quiet"
+                      type="button"
+                      disabled={minecraftEduSaving}
+                      onClick={() => void saveMinecraftEducationJoin(false)}
+                    >
+                      SET WORLD OFFLINE
+                    </button>
+                    {minecraftEduMessage && <span>{minecraftEduMessage}</span>}
+                  </div>
+                </section>
+              )}
             </section>
 
-            <div className="minecraft-server-note">
-              <strong>BEDROCK EDITION</strong>
-              <span>
-                Server: 5.9.151.142:2391 · Domain: a16eyftxek.scalacube.pro:2391
-              </span>
-            </div>
+            <section className="minecraft-bedrock-legacy">
+              <div className="minecraft-bedrock-title">
+                <div>
+                  <span className="card-label">BEDROCK SERVER</span>
+                  <h2>DANJI Bedrock node</h2>
+                </div>
+                <span>ALSO AVAILABLE</span>
+              </div>
+
+              <div className="minecraft-server-grid">
+                <article className="minecraft-server-card primary">
+                  <span className="card-label">DIRECT CONNECTION</span>
+                  <h2>DANJI Bedrock Server</h2>
+                  <div className="minecraft-server-field">
+                    <small>SERVER ADDRESS</small>
+                    <code>5.9.151.142</code>
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard.writeText('5.9.151.142')}
+                    >
+                      COPY IP
+                    </button>
+                  </div>
+                  <div className="minecraft-server-field">
+                    <small>PORT</small>
+                    <code>2391</code>
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard.writeText('2391')}
+                    >
+                      COPY PORT
+                    </button>
+                  </div>
+                  <div className="minecraft-server-combined">
+                    <span>FULL ADDRESS</span>
+                    <strong>5.9.151.142:2391</strong>
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard.writeText('5.9.151.142:2391')}
+                    >
+                      COPY FULL ADDRESS
+                    </button>
+                  </div>
+                </article>
+
+                <article className="minecraft-server-card">
+                  <span className="card-label">DOMAIN CONNECTION</span>
+                  <h2>ScalaCube Domain</h2>
+                  <div className="minecraft-server-field">
+                    <small>SERVER ADDRESS</small>
+                    <code>a16eyftxek.scalacube.pro</code>
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard.writeText('a16eyftxek.scalacube.pro')}
+                    >
+                      COPY DOMAIN
+                    </button>
+                  </div>
+                  <div className="minecraft-server-field">
+                    <small>PORT</small>
+                    <code>2391</code>
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard.writeText('2391')}
+                    >
+                      COPY PORT
+                    </button>
+                  </div>
+                  <div className="minecraft-server-combined">
+                    <span>FULL DOMAIN</span>
+                    <strong>a16eyftxek.scalacube.pro:2391</strong>
+                    <button
+                      type="button"
+                      onClick={() => void navigator.clipboard.writeText('a16eyftxek.scalacube.pro:2391')}
+                    >
+                      COPY FULL DOMAIN
+                    </button>
+                  </div>
+                </article>
+              </div>
+            </section>
           </div>
         </section>
       ) : activeTab === 'valorant' ? (
