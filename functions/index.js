@@ -13,7 +13,7 @@ const openAiKey = defineSecret("OPENAI_API_KEY");
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS_PER_HOUR = 40;
-const TOMORI_EMOTIONS = new Set([
+const SASHA_EMOTIONS = new Set([
   "neutral",
   "happy",
   "excited",
@@ -103,7 +103,7 @@ async function ensureDanjiMember(auth) {
   });
 }
 
-async function awardTomoriXp(auth) {
+async function awardSashaXp(auth) {
   const ref = db.collection("danjiMembers").doc(auth.uid);
   const identity = memberIdentity(auth);
 
@@ -922,7 +922,7 @@ exports.danjiAssistant = onCall(
         if (parsed && typeof parsed.reply === "string" && parsed.reply.trim()) {
           reply = parsed.reply.trim();
         }
-        if (parsed && TOMORI_EMOTIONS.has(parsed.emotion)) {
+        if (parsed && SASHA_EMOTIONS.has(parsed.emotion)) {
           emotion = parsed.emotion;
         }
       } catch {
@@ -935,7 +935,7 @@ exports.danjiAssistant = onCall(
         if (emotionObjectMatch) {
           const candidateEmotion = emotionObjectMatch[1];
 
-          if (TOMORI_EMOTIONS.has(candidateEmotion)) {
+          if (SASHA_EMOTIONS.has(candidateEmotion)) {
             emotion = candidateEmotion;
           }
 
@@ -952,7 +952,7 @@ exports.danjiAssistant = onCall(
       }
 
       try {
-        await awardTomoriXp(request.auth);
+        await awardSashaXp(request.auth);
       } catch (leaderboardError) {
         console.error("DANJI leaderboard XP update failed", leaderboardError);
       }
