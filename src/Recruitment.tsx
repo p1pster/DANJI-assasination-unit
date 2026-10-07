@@ -384,7 +384,7 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
                 </div>
                 <div className="recruitment-actions">
                   <button className="recruitment-primary" type="button" onClick={onOpenTomori}>
-                    TALK TO TOMORI <span>↗</span>
+                    TALK TO SASHA <span>↗</span>
                   </button>
                   <button className="recruitment-secondary" type="button" onClick={() => signOut(auth)}>
                     SIGN OUT
@@ -411,7 +411,7 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
             <strong>ONE DANJI PROFILE.</strong>
             <p>
               Linked providers share the same Firebase user ID, leaderboard score
-              and Tomori access. Each supported provider can receive its +25 link
+              and Sasha access. Each supported provider can receive its +25 link
               bonus once.
             </p>
             <div className="recruitment-rule" />
