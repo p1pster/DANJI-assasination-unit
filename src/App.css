@@ -1046,7 +1046,7 @@ button {
 }
 
 
-/* Tomori assistant identity */
+/* Sasha assistant identity */
 .tomori-trigger-avatar {
   width: 48px;
   height: 48px;
@@ -1105,7 +1105,7 @@ button {
 }
 
 
-/* Tomori response emotes */
+/* Sasha response emotes */
 .tomori-response {
   display: flex;
   align-items: flex-start;
@@ -1173,7 +1173,7 @@ button {
 }
 
 
-/* Reliable Tomori avatar: use the first cell of the working emote atlas */
+/* Reliable Sasha avatar: use the first cell of the working emote atlas */
 .tomori-avatar {
   display: block;
   background-image: url('./assets/tomori-emotes.webp');
