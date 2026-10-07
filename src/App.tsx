@@ -10,7 +10,7 @@ import SeriaTracker from './SeriaTracker'
 import './App.css'
 
 type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'seria' | 'minecraft' | 'valorant' | 'ethical' | 'briefing' | 'archive'
-type TomoriEmotion =
+type SashaEmotion =
   | 'neutral'
   | 'happy'
   | 'excited'
@@ -31,7 +31,7 @@ type TomoriEmotion =
 type ChatMessage = {
   role: 'user' | 'assistant'
   content: string
-  emotion?: TomoriEmotion
+  emotion?: SashaEmotion
 }
 
 const starterMessages: ChatMessage[] = [
@@ -86,7 +86,7 @@ function App() {
     try {
       const askDanji = httpsCallable<
         { messages: ChatMessage[] },
-        { reply: string; emotion: TomoriEmotion }
+        { reply: string; emotion: SashaEmotion }
       >(functions, 'danjiAssistant')
 
       const result = await askDanji({ messages: nextMessages.slice(-12) })
@@ -150,7 +150,7 @@ function App() {
             type="button"
             onClick={() => setActiveTab('assistant')}
           >
-            Tomori
+            Sasha
           </button>
           <button
             className={activeTab === 'recruitment' ? 'tab active' : 'tab'}
@@ -310,7 +310,7 @@ function App() {
           <div className="assistant-heading">
             <div className="eyebrow">
               <span>02</span>
-              TOMORI
+              SASHA
             </div>
             <div className="assistant-heading-row">
               <div>
@@ -410,7 +410,7 @@ function App() {
       ) : activeTab === 'recruitment' ? (
         <Recruitment
           user={user}
-          onOpenTomori={() => setActiveTab('assistant')}
+          onOpenSasha={() => setActiveTab('assistant')}
         />
       ) : activeTab === 'leaderboard' ? (
         <Leaderboard
