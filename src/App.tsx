@@ -38,7 +38,7 @@ const starterMessages: ChatMessage[] = [
   {
     role: 'assistant',
     content:
-      'Tomori online. Ask me a question, give me something to plan, or just talk to me.',
+      'Sasha online. Ask me a question, give me something to plan, or just talk to me.',
     emotion: 'happy',
   },
 ]
@@ -73,7 +73,7 @@ function App() {
 
     if (!text || isThinking) return
     if (!user) {
-      setAssistantError('Become a DANJI member before talking to Tomori.')
+      setAssistantError('Become a DANJI member before talking to Sasha.')
       return
     }
 
@@ -114,9 +114,9 @@ function App() {
       if (message) {
         setAssistantError(message.replace(/^FirebaseError:\s*/i, ''))
       } else if (code) {
-        setAssistantError(`Tomori could not connect (${code}).`)
+        setAssistantError(`Sasha could not connect (${code}).`)
       } else {
-        setAssistantError('Tomori could not connect to the AI service.')
+        setAssistantError('Sasha could not connect to the AI service.')
       }
     } finally {
       setIsThinking(false)
@@ -250,7 +250,7 @@ function App() {
                 type="button"
                 onClick={() => setFloatingAssistantOpen(true)}
               >
-                OPEN TOMORI
+                OPEN SASHA
                 <span aria-hidden="true">↗</span>
               </button>
               <a
@@ -315,7 +315,7 @@ function App() {
             <div className="assistant-heading-row">
               <div>
                 <p className="kicker">INTELLIGENCE NODE // ACTIVE</p>
-                <h1>Tomori.</h1>
+                <h1>Sasha.</h1>
               </div>
 
               <div className="assistant-user">
@@ -337,9 +337,9 @@ function App() {
 
           <div className="assistant-console">
             <aside className="assistant-sidebar">
-              <i className="tomori-sidebar-avatar tomori-avatar" role="img" aria-label="Tomori" />
+              <i className="tomori-sidebar-avatar tomori-avatar" role="img" aria-label="Sasha" />
               <span className="card-label">AI CORE</span>
-              <strong>TOMORI // 01</strong>
+              <strong>SASHA // 01</strong>
               <p>
                 The AI runs through a protected Firebase Function, so the API key
                 never lives in the website code.
@@ -357,7 +357,7 @@ function App() {
                     className={message.role === 'user' ? 'message user-message' : 'message ai-message'}
                     key={index}
                   >
-                    <span>{message.role === 'user' ? 'YOU' : 'TOMORI'}</span>
+                    <span>{message.role === 'user' ? 'YOU' : 'SASHA'}</span>
                     {message.role === 'assistant' ? (
                       <div className="tomori-response">
                         <i
@@ -374,7 +374,7 @@ function App() {
 
                 {isThinking && (
                   <article className="message ai-message thinking-message">
-                    <span>TOMORI</span>
+                    <span>SASHA</span>
                     <div className="tomori-response">
                       <i className="tomori-emote tomori-emote-thinking" aria-hidden="true" />
                       <p>Processing<span className="thinking-dots">...</span></p>
@@ -389,7 +389,7 @@ function App() {
                 <textarea
                   value={draft}
                   onChange={(event) => setDraft(event.target.value)}
-                  placeholder={user ? 'Message Tomori...' : 'Sign in to talk to Tomori...'}
+                  placeholder={user ? 'Message Sasha...' : 'Sign in to talk to Sasha...'}
                   maxLength={4000}
                   disabled={!user || isThinking}
                   onKeyDown={(event) => {
@@ -461,13 +461,13 @@ function App() {
 
       <div className={floatingAssistantOpen ? 'floating-ai open' : 'floating-ai'}>
         {floatingAssistantOpen && (
-          <section className="floating-ai-panel" aria-label="Tomori AI assistant">
+          <section className="floating-ai-panel" aria-label="Sasha AI assistant">
             <header className="floating-ai-header">
               <div className="floating-ai-identity">
                 <i className="tomori-header-avatar tomori-avatar" aria-hidden="true" />
                 <div>
                   <span className="floating-ai-kicker">DANJI // INTELLIGENCE NODE</span>
-                  <strong>TOMORI</strong>
+                  <strong>SASHA</strong>
                 </div>
               </div>
               <div className="floating-ai-header-actions">
@@ -494,7 +494,7 @@ function App() {
             {!user ? (
               <div className="floating-ai-signin">
                 <span className="status-dot idle" />
-                <p>Tomori is available to DANJI members.</p>
+                <p>Sasha is available to DANJI members.</p>
                 <button
                   type="button"
                   onClick={() => {
@@ -513,7 +513,7 @@ function App() {
                       className={message.role === 'user' ? 'floating-message user-message' : 'floating-message ai-message'}
                       key={index}
                     >
-                      <span>{message.role === 'user' ? 'YOU' : 'TOMORI'}</span>
+                      <span>{message.role === 'user' ? 'YOU' : 'SASHA'}</span>
                       {message.role === 'assistant' ? (
                         <div className="tomori-response compact">
                           <i
@@ -530,7 +530,7 @@ function App() {
 
                   {isThinking && (
                     <article className="floating-message ai-message">
-                      <span>TOMORI</span>
+                      <span>SASHA</span>
                       <div className="tomori-response compact">
                         <i className="tomori-emote tomori-emote-thinking" aria-hidden="true" />
                         <p>Processing<span className="thinking-dots">...</span></p>
@@ -545,7 +545,7 @@ function App() {
                   <textarea
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
-                    placeholder="Message Tomori..."
+                    placeholder="Message Sasha..."
                     maxLength={4000}
                     disabled={isThinking}
                     onKeyDown={(event) => {
@@ -567,7 +567,7 @@ function App() {
         <button
           className="floating-ai-trigger"
           type="button"
-          aria-label={floatingAssistantOpen ? 'Close Tomori' : 'Open Tomori'}
+          aria-label={floatingAssistantOpen ? 'Close Sasha' : 'Open Sasha'}
           aria-expanded={floatingAssistantOpen}
           onClick={() => setFloatingAssistantOpen((open) => !open)}
         >
@@ -575,9 +575,9 @@ function App() {
             <span className="floating-close">×</span>
           ) : (
             <>
-              <i className="tomori-trigger-avatar tomori-avatar" role="img" aria-label="Tomori" />
+              <i className="tomori-trigger-avatar tomori-avatar" role="img" aria-label="Sasha" />
               <span className="floating-ai-label">
-                <strong>TOMORI</strong>
+                <strong>SASHA</strong>
                 <small>DANJI AI</small>
               </span>
             </>
