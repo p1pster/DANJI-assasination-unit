@@ -24,7 +24,7 @@ import { auth, functions } from './firebase'
 
 type RecruitmentProps = {
   user: User | null
-  onOpenTomori: () => void
+  onOpenSasha: () => void
 }
 
 type ProviderOption = {
@@ -125,7 +125,7 @@ const cleanAuthError = (error: unknown) => {
     'Authentication did not complete. Try again.'
 }
 
-function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
+function Recruitment({ user, onOpenSasha }: RecruitmentProps) {
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [busyProvider, setBusyProvider] = useState('')
@@ -383,7 +383,7 @@ function Recruitment({ user, onOpenTomori }: RecruitmentProps) {
                   </div>
                 </div>
                 <div className="recruitment-actions">
-                  <button className="recruitment-primary" type="button" onClick={onOpenTomori}>
+                  <button className="recruitment-primary" type="button" onClick={onOpenSasha}>
                     TALK TO SASHA <span>↗</span>
                   </button>
                   <button className="recruitment-secondary" type="button" onClick={() => signOut(auth)}>
