@@ -49,34 +49,26 @@ type MinecraftEduStatusResponse = {
 }
 
 const minecraftJoinSymbols = [
-  ['apple', '🍎', 'Apple'],
   ['book', '📕', 'Book'],
-  ['pickaxe', '⛏️', 'Pickaxe'],
-  ['sword', '🗡️', 'Sword'],
-  ['cake', '🎂', 'Cake'],
-  ['creeper', '🟩', 'Creeper'],
-  ['diamond', '💎', 'Diamond'],
-  ['emerald', '🟢', 'Emerald'],
-  ['tnt', '🧨', 'TNT'],
-  ['torch', '🔥', 'Torch'],
-  ['potion', '🧪', 'Potion'],
-  ['bow', '🏹', 'Bow'],
+  ['balloon', '🎈', 'Balloon'],
+  ['ladder', '🪜', 'Ladder'],
+  ['face', '🙂', 'Face'],
+  ['cookie', '🍪', 'Cookie'],
   ['fish', '🐟', 'Fish'],
-  ['chicken', '🐔', 'Chicken'],
-  ['pig', '🐷', 'Pig'],
-  ['wolf', '🐺', 'Wolf'],
-  ['fox', '🦊', 'Fox'],
-  ['panda', '🐼', 'Panda'],
-  ['bee', '🐝', 'Bee'],
-  ['flower', '🌸', 'Flower'],
-  ['carrot', '🥕', 'Carrot'],
-  ['redstone', '🔴', 'Redstone'],
-  ['skeleton', '💀', 'Skeleton'],
-  ['zombie', '🧟', 'Zombie'],
-  ['enderman', '🟪', 'Enderman'],
+  ['shovel', '♠️', 'Shovel'],
+  ['cake', '🎂', 'Cake'],
+  ['pickaxe', '⛏️', 'Pickaxe'],
+  ['bucket', '🪣', 'Bucket'],
   ['steve', '👤', 'Steve'],
-  ['alex', '🧑‍🦰', 'Alex'],
-  ['agent', '🤖', 'Agent'],
+  ['apple', '🍎', 'Apple'],
+  ['carrot', '🥕', 'Carrot'],
+  ['cow', '🐄', 'Cow'],
+  ['sign', '🪧', 'Sign'],
+  ['potion', '🧪', 'Potion'],
+  ['paper', '📄', 'Paper'],
+  ['rabbit', '🐇', 'Rabbit'],
+  ['panda', '🐼', 'Panda'],
+  ['water', '💧', 'Water'],
 ] as const
 
 const minecraftJoinSymbol = (id: string) =>
@@ -101,7 +93,7 @@ function App() {
   const [assistantError, setAssistantError] = useState('')
   const [floatingAssistantOpen, setFloatingAssistantOpen] = useState(false)
   const [minecraftEdu, setMinecraftEdu] = useState<MinecraftEduState>({
-    symbols: ['apple', 'book', 'pickaxe', 'diamond'],
+    symbols: ['book', 'balloon', 'apple', 'carrot'],
     online: false,
     updatedAtMs: null,
   })
@@ -141,7 +133,7 @@ function App() {
           ? data.symbols.filter((value): value is string => typeof value === 'string').slice(0, 4)
           : []
         const nextSymbols =
-          symbols.length === 4 ? symbols : ['apple', 'book', 'pickaxe', 'diamond']
+          symbols.length === 4 ? symbols : ['book', 'balloon', 'apple', 'carrot']
         const updatedAtMs =
           data.updatedAt && typeof data.updatedAt.toMillis === 'function'
             ? data.updatedAt.toMillis()
