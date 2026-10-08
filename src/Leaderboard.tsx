@@ -17,11 +17,24 @@ type LeaderboardEntry = {
   photoURL: string
   xp: number
   tomoriMessages: number
+  leaderboardTitle: string
 }
 
 type LeaderboardProps = {
   currentUid?: string | null
   onJoin: () => void
+}
+
+type LeaderboardAdminStatus = {
+  canEdit: boolean
+  canBootstrap: boolean
+  role?: string
+}
+
+type LeaderboardAdminDraft = {
+  displayName: string
+  xp: string
+  leaderboardTitle: string
 }
 
 type TimedRewardId = 'hourly' | 'sixHour' | 'daily'
@@ -190,6 +203,8 @@ const toEntry = (id: string, data: DocumentData): LeaderboardEntry => ({
   photoURL: typeof data.photoURL === 'string' ? data.photoURL : '',
   xp: typeof data.xp === 'number' ? data.xp : 0,
   tomoriMessages: typeof data.tomoriMessages === 'number' ? data.tomoriMessages : 0,
+  leaderboardTitle:
+    typeof data.leaderboardTitle === 'string' ? data.leaderboardTitle.trim() : '',
 })
 
 function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
@@ -207,6 +222,13 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
   const [timedRewardMessage, setTimedRewardMessage] = useState('')
   const [timedRewardError, setTimedRewardError] = useState('')
   const [clockNow, setClockNow] = useState(Date.now())
+  const [adminCanEdit, setAdminCanEdit] = useState(false)
+  const [adminCanBootstrap, setAdminCanBootstrap] = useState(false)
+  const [adminStatusBusy, setAdminStatusBusy] = useState(false)
+  const [adminDrafts, setAdminDrafts] = useState<Record<string, LeaderboardAdminDraft>>({})
+  const [adminSavingUid, setAdminSavingUid] = useState('')
+  const [adminMessage, setAdminMessage] = useState('')
+  const [adminError, setAdminError] = useState('')
 
   useEffect(() => {
     const leaderboardQuery = query(
@@ -264,6 +286,125 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
       )
     })
   }, [currentUid])
+
+  useEffect(() => {
+    setAdminDrafts((current) => {
+      const next = { ...current }
+      for (const entry of entries) {
+        if (!next[entry.uid]) {
+          next[entry.uid] = {
+            displayName: entry.displayName,
+            xp: String(entry.xp),
+            leaderboardTitle: entry.leaderboardTitle,
+          }
+        }
+      }
+      return next
+    })
+  }, [entries])
+
+  useEffect(() => {
+    if (!currentUid) {
+      setAdminCanEdit(false)
+      setAdminCanBootstrap(false)
+      return
+    }
+
+    setAdminStatusBusy(true)
+    const getStatus = httpsCallable<Record<string, never>, LeaderboardAdminStatus>(
+      functions,
+      'getLeaderboardAdminStatus',
+    )
+
+    void getStatus({})
+      .then((result) => {
+        setAdminCanEdit(result.data.canEdit === true)
+        setAdminCanBootstrap(result.data.canBootstrap === true)
+      })
+      .catch((statusError) => {
+        console.error(statusError)
+        setAdminCanEdit(false)
+        setAdminCanBootstrap(false)
+      })
+      .finally(() => setAdminStatusBusy(false))
+  }, [currentUid])
+
+  const claimLeaderboardOwner = async () => {
+    if (!currentUid || adminStatusBusy) return
+    setAdminStatusBusy(true)
+    setAdminError('')
+    setAdminMessage('')
+
+    try {
+      const claim = httpsCallable<Record<string, never>, { ok: boolean }>(
+        functions,
+        'claimLeaderboardOwner',
+      )
+      await claim({})
+      setAdminCanEdit(true)
+      setAdminCanBootstrap(false)
+      setAdminMessage('OWNER CONTROL ENABLED')
+    } catch (claimError) {
+      const message =
+        typeof claimError === 'object' && claimError !== null && 'message' in claimError
+          ? String((claimError as { message?: unknown }).message || '')
+          : ''
+      setAdminError(
+        message.replace(/^FirebaseError:\s*/i, '') ||
+          'Owner control could not be enabled.',
+      )
+    } finally {
+      setAdminStatusBusy(false)
+    }
+  }
+
+  const updateLeaderboardMember = async (entry: LeaderboardEntry) => {
+    if (!adminCanEdit || adminSavingUid) return
+    const draft = adminDrafts[entry.uid]
+    if (!draft) return
+
+    const xp = Number(draft.xp)
+    if (!Number.isFinite(xp) || xp < 0) {
+      setAdminError('XP must be a number of 0 or more.')
+      return
+    }
+
+    setAdminSavingUid(entry.uid)
+    setAdminMessage('')
+    setAdminError('')
+
+    try {
+      const updateMember = httpsCallable<
+        {
+          uid: string
+          displayName: string
+          xp: number
+          leaderboardTitle: string
+        },
+        { ok: boolean }
+      >(functions, 'updateLeaderboardMember')
+
+      await updateMember({
+        uid: entry.uid,
+        displayName: draft.displayName,
+        xp: Math.round(xp),
+        leaderboardTitle: draft.leaderboardTitle,
+      })
+
+      setAdminMessage(`${draft.displayName || entry.displayName} UPDATED`)
+    } catch (updateError) {
+      const message =
+        typeof updateError === 'object' && updateError !== null && 'message' in updateError
+          ? String((updateError as { message?: unknown }).message || '')
+          : ''
+      setAdminError(
+        message.replace(/^FirebaseError:\s*/i, '') ||
+          'That leaderboard member could not be updated.',
+      )
+    } finally {
+      setAdminSavingUid('')
+    }
+  }
 
   useEffect(() => {
     const timer = window.setInterval(() => setClockNow(Date.now()), 1000)
@@ -579,6 +720,130 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
           )
         })()}
 
+        {currentUid && adminCanBootstrap && !adminCanEdit && (
+          <section className="leaderboard-admin-bootstrap">
+            <div>
+              <span className="card-label">DANJI OWNER SETUP</span>
+              <strong>Enable leaderboard admin controls.</strong>
+              <p>
+                No DANJI owner is configured yet. The current #1 member can claim the
+                initial owner role once.
+              </p>
+            </div>
+            <button
+              type="button"
+              disabled={adminStatusBusy}
+              onClick={() => void claimLeaderboardOwner()}
+            >
+              {adminStatusBusy ? 'ENABLING…' : 'CLAIM OWNER CONTROL'}
+            </button>
+          </section>
+        )}
+
+        {currentUid && adminCanEdit && (
+          <section className="leaderboard-admin-panel">
+            <div className="leaderboard-admin-heading">
+              <div>
+                <span className="card-label">ADMIN PANEL</span>
+                <h2>Edit leaderboard members.</h2>
+                <p>
+                  Change the displayed name, XP and leaderboard title. Updates are
+                  server-authorized and appear on the live board immediately.
+                </p>
+              </div>
+              <span>ADMIN ACCESS</span>
+            </div>
+
+            <div className="leaderboard-admin-members">
+              {entries.map((entry) => {
+                const draft = adminDrafts[entry.uid] || {
+                  displayName: entry.displayName,
+                  xp: String(entry.xp),
+                  leaderboardTitle: entry.leaderboardTitle,
+                }
+
+                return (
+                  <article className="leaderboard-admin-member" key={entry.uid}>
+                    <div className="leaderboard-admin-identity">
+                      <div className="leaderboard-avatar small">
+                        {entry.photoURL ? (
+                          <img src={entry.photoURL} alt="" referrerPolicy="no-referrer" />
+                        ) : (
+                          <span>{initials(entry.displayName)}</span>
+                        )}
+                      </div>
+                      <div>
+                        <strong>{entry.displayName}</strong>
+                        <small>{entry.uid === currentUid ? 'YOU' : 'MEMBER'} · {entry.xp.toLocaleString()} XP</small>
+                      </div>
+                    </div>
+
+                    <label>
+                      <span>DISPLAY NAME</span>
+                      <input
+                        value={draft.displayName}
+                        maxLength={60}
+                        onChange={(event) =>
+                          setAdminDrafts((current) => ({
+                            ...current,
+                            [entry.uid]: { ...draft, displayName: event.target.value },
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      <span>XP</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="1000000000000"
+                        step="1"
+                        value={draft.xp}
+                        onChange={(event) =>
+                          setAdminDrafts((current) => ({
+                            ...current,
+                            [entry.uid]: { ...draft, xp: event.target.value },
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <label>
+                      <span>CUSTOM TITLE</span>
+                      <input
+                        value={draft.leaderboardTitle}
+                        maxLength={28}
+                        placeholder={rankTitle(Number(draft.xp) || 0)}
+                        onChange={(event) =>
+                          setAdminDrafts((current) => ({
+                            ...current,
+                            [entry.uid]: { ...draft, leaderboardTitle: event.target.value },
+                          }))
+                        }
+                      />
+                    </label>
+
+                    <button
+                      type="button"
+                      disabled={Boolean(adminSavingUid)}
+                      onClick={() => void updateLeaderboardMember(entry)}
+                    >
+                      {adminSavingUid === entry.uid ? 'SAVING…' : 'SAVE MEMBER'}
+                    </button>
+                  </article>
+                )
+              })}
+            </div>
+
+            {(adminMessage || adminError) && (
+              <div className={adminError ? 'leaderboard-admin-feedback error' : 'leaderboard-admin-feedback success'}>
+                {adminError || adminMessage}
+              </div>
+            )}
+          </section>
+        )}
+
         {loading ? (
           <div className="leaderboard-state">Loading DANJI rankings…</div>
         ) : error ? (
@@ -613,7 +878,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                       )}
                     </div>
                     <strong>{entry.displayName}</strong>
-                    <small>{rankTitle(entry.xp)}</small>
+                    <small>{entry.leaderboardTitle || rankTitle(entry.xp)}</small>
                     <b>{entry.xp.toLocaleString()} XP</b>
                     {visualIndex === 1 && <i>TOP RANK</i>}
                   </article>
@@ -647,7 +912,7 @@ function Leaderboard({ currentUid, onJoin }: LeaderboardProps) {
                     <strong>{entry.displayName}</strong>
                     {entry.uid === currentUid && <small>YOU</small>}
                   </div>
-                  <span>{rankTitle(entry.xp)}</span>
+                  <span>{entry.leaderboardTitle || rankTitle(entry.xp)}</span>
                   <span>{entry.tomoriMessages}</span>
                   <strong>{entry.xp.toLocaleString()}</strong>
                 </div>
