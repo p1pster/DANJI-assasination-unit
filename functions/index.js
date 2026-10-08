@@ -1032,7 +1032,7 @@ const MINECRAFT_EDU_ALLOWED_SYMBOLS = new Set([
   "paper", "rabbit", "panda", "water",
 ]);
 
-async function isDanjiMinecraftAdmin(auth) {
+async function isDanjiAdmin(auth) {
   if (!auth) return false;
 
   const token = auth.token || {};
@@ -1049,6 +1049,10 @@ async function isDanjiMinecraftAdmin(auth) {
 
   const role = String((member.data() || {}).role || "").trim().toLowerCase();
   return ["owner", "admin", "full-admin", "full_admin"].includes(role);
+}
+
+async function isDanjiMinecraftAdmin(auth) {
+  return isDanjiAdmin(auth);
 }
 
 function normalizeMinecraftEduSymbols(input) {
@@ -1147,6 +1151,201 @@ exports.updateMinecraftEducationJoin = onCall(
       },
       { merge: true },
     );
+
+    return { ok: true };
+  },
+);
+
+
+async function getDanjiOwnerUid() {
+  const configRef = db.collection("danjiConfig").doc("adminBootstrap");
+  const config = await configRef.get();
+  const ownerUid =
+    config.exists && typeof (config.data() || {}).ownerUid === "string"
+      ? String((config.data() || {}).ownerUid).trim()
+      : "";
+
+  if (ownerUid) return ownerUid;
+
+  const members = await db
+    .collection("danjiMembers")
+    .orderBy("xp", "desc")
+    .limit(100)
+    .get();
+
+  const existingAdmin = members.docs.find((doc) => {
+    const role = String((doc.data() || {}).role || "").trim().toLowerCase();
+    return ["owner", "admin", "full-admin", "full_admin"].includes(role);
+  });
+
+  return existingAdmin ? existingAdmin.id : "";
+}
+
+exports.getLeaderboardAdminStatus = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      return { canEdit: false, canBootstrap: false, role: "" };
+    }
+
+    if (await isDanjiAdmin(request.auth)) {
+      const member = await db.collection("danjiMembers").doc(request.auth.uid).get();
+      const role = member.exists
+        ? String((member.data() || {}).role || "")
+        : "";
+      return { canEdit: true, canBootstrap: false, role };
+    }
+
+    const ownerUid = await getDanjiOwnerUid();
+    if (ownerUid) {
+      return { canEdit: false, canBootstrap: false, role: "" };
+    }
+
+    const top = await db
+      .collection("danjiMembers")
+      .orderBy("xp", "desc")
+      .limit(1)
+      .get();
+
+    const topUid = top.empty ? "" : top.docs[0].id;
+
+    return {
+      canEdit: false,
+      canBootstrap: topUid === request.auth.uid,
+      role: "",
+    };
+  },
+);
+
+exports.claimLeaderboardOwner = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in before claiming DANJI owner control.");
+    }
+
+    if (await isDanjiAdmin(request.auth)) {
+      return { ok: true };
+    }
+
+    const top = await db
+      .collection("danjiMembers")
+      .orderBy("xp", "desc")
+      .limit(1)
+      .get();
+
+    if (top.empty || top.docs[0].id !== request.auth.uid) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only the current #1 member can claim the initial DANJI owner role.",
+      );
+    }
+
+    const configRef = db.collection("danjiConfig").doc("adminBootstrap");
+    const memberRef = db.collection("danjiMembers").doc(request.auth.uid);
+
+    await db.runTransaction(async (transaction) => {
+      const config = await transaction.get(configRef);
+      const configData = config.exists ? config.data() || {} : {};
+      const existingOwner =
+        typeof configData.ownerUid === "string" ? configData.ownerUid.trim() : "";
+
+      if (existingOwner && existingOwner !== request.auth.uid) {
+        throw new HttpsError(
+          "already-exists",
+          "A DANJI owner has already been configured.",
+        );
+      }
+
+      const member = await transaction.get(memberRef);
+      if (!member.exists) {
+        throw new HttpsError("not-found", "Your DANJI member profile was not found.");
+      }
+
+      transaction.set(
+        configRef,
+        {
+          ownerUid: request.auth.uid,
+          claimedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      transaction.update(memberRef, {
+        role: "owner",
+        adminGrantedAt: FieldValue.serverTimestamp(),
+      });
+    });
+
+    return { ok: true };
+  },
+);
+
+exports.updateLeaderboardMember = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError("unauthenticated", "Sign in before editing the DANJI leaderboard.");
+    }
+
+    if (!(await isDanjiAdmin(request.auth))) {
+      throw new HttpsError(
+        "permission-denied",
+        "Only a DANJI admin can edit leaderboard members.",
+      );
+    }
+
+    const data = request.data || {};
+    const uid = typeof data.uid === "string" ? data.uid.trim() : "";
+    const displayName =
+      typeof data.displayName === "string" ? data.displayName.trim().slice(0, 60) : "";
+    const leaderboardTitle =
+      typeof data.leaderboardTitle === "string"
+        ? data.leaderboardTitle.trim().slice(0, 28)
+        : "";
+    const xp = Number(data.xp);
+
+    if (!uid) {
+      throw new HttpsError("invalid-argument", "A leaderboard member is required.");
+    }
+    if (!displayName) {
+      throw new HttpsError("invalid-argument", "Display name cannot be blank.");
+    }
+    if (!Number.isFinite(xp) || xp < 0 || xp > 1_000_000_000_000) {
+      throw new HttpsError(
+        "invalid-argument",
+        "XP must be between 0 and 1,000,000,000,000.",
+      );
+    }
+
+    const targetRef = db.collection("danjiMembers").doc(uid);
+    const target = await targetRef.get();
+
+    if (!target.exists) {
+      throw new HttpsError("not-found", "That DANJI member no longer exists.");
+    }
+
+    await targetRef.update({
+      displayName,
+      xp: Math.round(xp),
+      leaderboardTitle,
+      leaderboardEditedAt: FieldValue.serverTimestamp(),
+      leaderboardEditedBy: request.auth.uid,
+    });
 
     return { ok: true };
   },
