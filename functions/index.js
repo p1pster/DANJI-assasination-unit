@@ -1025,11 +1025,11 @@ exports.danjiAssistant = onCall(
 );
 
 
-const MINECRAFT_EDU_DEFAULT_SYMBOLS = ["book", "balloon", "apple", "carrot"];
+const MINECRAFT_EDU_DEFAULT_SYMBOLS = ["bottle", "alex", "water", "llama"];
 const MINECRAFT_EDU_ALLOWED_SYMBOLS = new Set([
   "book", "balloon", "ladder", "face", "cookie", "fish", "shovel", "cake",
   "pickaxe", "bucket", "steve", "apple", "carrot", "cow", "sign", "potion",
-  "paper", "rabbit", "panda", "water",
+  "paper", "rabbit", "panda", "water", "bottle", "alex", "llama",
 ]);
 
 async function isDanjiAdmin(auth) {
