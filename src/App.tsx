@@ -69,6 +69,9 @@ const minecraftJoinSymbols = [
   ['rabbit', '🐇', 'Rabbit'],
   ['panda', '🐼', 'Panda'],
   ['water', '💧', 'Water'],
+  ['bottle', '🧴', 'Bottle'],
+  ['alex', '🧑‍🦰', 'Alex'],
+  ['llama', '🦙', 'Llama'],
 ] as const
 
 const minecraftJoinSymbol = (id: string) =>
@@ -93,7 +96,7 @@ function App() {
   const [assistantError, setAssistantError] = useState('')
   const [floatingAssistantOpen, setFloatingAssistantOpen] = useState(false)
   const [minecraftEdu, setMinecraftEdu] = useState<MinecraftEduState>({
-    symbols: ['book', 'balloon', 'apple', 'carrot'],
+    symbols: ['bottle', 'alex', 'water', 'llama'],
     online: false,
     updatedAtMs: null,
   })
@@ -133,7 +136,7 @@ function App() {
           ? data.symbols.filter((value): value is string => typeof value === 'string').slice(0, 4)
           : []
         const nextSymbols =
-          symbols.length === 4 ? symbols : ['book', 'balloon', 'apple', 'carrot']
+          symbols.length === 4 ? symbols : ['bottle', 'alex', 'water', 'llama']
         const updatedAtMs =
           data.updatedAt && typeof data.updatedAt.toMillis === 'function'
             ? data.updatedAt.toMillis()
