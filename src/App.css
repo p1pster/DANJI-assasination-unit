@@ -4571,3 +4571,308 @@ button.ethical-tool-card.active .ethical-tool-marker {
     grid-column: auto;
   }
 }
+
+
+/* Party-exclusive code cosmetics */
+.party-drop {
+  margin-top: 24px;
+  padding: clamp(18px, 3vw, 30px);
+  border: 1px solid rgba(190, 35, 61, .28);
+  background:
+    radial-gradient(circle at 100% 0%, rgba(181, 29, 55, .12), transparent 38%),
+    linear-gradient(145deg, rgba(14, 9, 11, .98), rgba(7, 7, 9, .98));
+  box-shadow: 0 24px 70px rgba(0,0,0,.2);
+}
+
+.party-drop.unlocked {
+  border-color: rgba(211, 50, 77, .42);
+}
+
+.party-drop-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+}
+
+.party-drop-heading h2 {
+  margin: 7px 0 0;
+  color: #f2e8ea;
+  font-size: clamp(24px, 3vw, 36px);
+  letter-spacing: -.04em;
+}
+
+.party-drop-heading p {
+  max-width: 720px;
+  margin: 9px 0 0;
+  color: #85797c;
+  font-size: 10px;
+  line-height: 1.6;
+}
+
+.party-drop-badge {
+  flex: 0 0 auto;
+  padding: 8px 10px;
+  border: 1px solid rgba(194, 48, 72, .32);
+  color: #a97a83;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .14em;
+}
+
+.party-drop-badge.unlocked {
+  border-color: rgba(73, 169, 97, .35);
+  background: rgba(60, 138, 79, .08);
+  color: #8ec49b;
+}
+
+.party-drop-locked {
+  margin-top: 18px;
+  padding: 16px 18px;
+  border-left: 3px solid #8e182d;
+  background: rgba(130, 18, 38, .08);
+}
+
+.party-drop-locked strong {
+  color: #d5b4ba;
+  font-size: 9px;
+  letter-spacing: .12em;
+}
+
+.party-drop-locked p {
+  margin: 6px 0 0;
+  color: #796e71;
+  font-size: 10px;
+}
+
+.party-code-form {
+  margin-top: 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.party-code-form label {
+  display: grid;
+  gap: 7px;
+}
+
+.party-code-form label > span {
+  color: #76696d;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.party-code-form input {
+  width: 100%;
+  min-width: 0;
+  height: 46px;
+  box-sizing: border-box;
+  padding: 0 13px;
+  border: 1px solid rgba(196, 40, 66, .23);
+  outline: none;
+  background: #0b090a;
+  color: #eee5e7;
+  font: inherit;
+  font-size: 12px;
+  letter-spacing: .08em;
+}
+
+.party-code-form input:focus {
+  border-color: rgba(225, 58, 86, .62);
+  box-shadow: 0 0 0 2px rgba(191, 31, 58, .08);
+}
+
+.party-code-form button,
+.party-cosmetic-card button {
+  min-height: 46px;
+  padding: 0 16px;
+  border: 1px solid rgba(204, 48, 74, .4);
+  background: rgba(151, 21, 44, .17);
+  color: #e1a7b1;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .12em;
+  cursor: pointer;
+}
+
+.party-code-form button:hover,
+.party-cosmetic-card button:hover {
+  border-color: rgba(231, 67, 94, .72);
+  background: rgba(169, 23, 49, .28);
+  color: #fff;
+}
+
+.party-code-form button:disabled,
+.party-cosmetic-card button:disabled {
+  opacity: .5;
+  cursor: default;
+}
+
+.party-equipped-summary {
+  margin-top: 18px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.party-equipped-summary > span {
+  min-width: 0;
+  padding: 13px 15px;
+  background: rgba(255,255,255,.015);
+}
+
+.party-equipped-summary > span + span {
+  border-left: 1px solid rgba(255,255,255,.06);
+}
+
+.party-equipped-summary small,
+.party-equipped-summary strong {
+  display: block;
+}
+
+.party-equipped-summary small {
+  color: #6f6467;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.party-equipped-summary strong {
+  margin-top: 6px;
+  overflow: hidden;
+  color: #d9d0d2;
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-cosmetic-grid {
+  margin-top: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.party-cosmetic-card {
+  min-width: 0;
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: 190px auto auto;
+  border: 1px solid rgba(255,255,255,.07);
+  background: rgba(255,255,255,.015);
+}
+
+.party-cosmetic-card.equipped {
+  border-color: rgba(202, 44, 70, .5);
+  box-shadow: inset 0 0 0 1px rgba(170, 27, 51, .12);
+}
+
+.party-cosmetic-thumb {
+  width: 100%;
+  height: 190px;
+  background-image: url('/assets/danji-party-sprite.webp');
+  background-size: 100% 700%;
+  background-repeat: no-repeat;
+  background-color: #f7f7f7;
+  background-position-x: center;
+}
+
+.party-cosmetic-copy {
+  min-width: 0;
+  padding: 13px 13px 12px;
+}
+
+.party-cosmetic-copy span,
+.party-cosmetic-copy strong,
+.party-cosmetic-copy small {
+  display: block;
+}
+
+.party-cosmetic-copy span {
+  color: #a53449;
+  font-size: 7px;
+  font-weight: 900;
+  letter-spacing: .12em;
+}
+
+.party-cosmetic-copy strong {
+  margin-top: 6px;
+  overflow: hidden;
+  color: #e5dcde;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.party-cosmetic-copy small {
+  margin-top: 5px;
+  color: #62595c;
+  font-size: 7px;
+  letter-spacing: .08em;
+}
+
+.party-cosmetic-card button {
+  margin: 0 12px 12px;
+  min-height: 38px;
+}
+
+.party-cosmetic-card.equipped button {
+  border-color: rgba(70, 153, 90, .32);
+  background: rgba(53, 123, 70, .08);
+  color: #8bb797;
+}
+
+.party-drop-feedback {
+  margin-top: 13px;
+  padding: 11px 13px;
+  border-left: 3px solid;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: .1em;
+}
+
+.party-drop-feedback.success {
+  border-color: #59a96d;
+  background: rgba(61, 132, 78, .08);
+  color: #93c39f;
+}
+
+.party-drop-feedback.error {
+  border-color: #c52a43;
+  background: rgba(142, 18, 41, .08);
+  color: #dfa0aa;
+}
+
+@media (max-width: 900px) {
+  .party-cosmetic-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 620px) {
+  .party-drop-heading {
+    flex-direction: column;
+  }
+
+  .party-code-form,
+  .party-equipped-summary,
+  .party-cosmetic-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .party-equipped-summary > span + span {
+    border-left: 0;
+    border-top: 1px solid rgba(255,255,255,.06);
+  }
+
+  .party-cosmetic-card {
+    grid-template-rows: 220px auto auto;
+  }
+
+  .party-cosmetic-thumb {
+    height: 220px;
+  }
+}
