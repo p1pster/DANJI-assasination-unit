@@ -35,6 +35,30 @@ type ProviderOption = {
   note?: string
 }
 
+type PartyCosmeticItem = {
+  id: string
+  label: string
+  slot: 'hat' | 'body'
+  spriteY: number
+}
+
+type PartyCosmeticsStatus = {
+  unlocked: boolean
+  items: string[]
+  equippedHat: string
+  equippedBody: string
+}
+
+const partyCosmetics: PartyCosmeticItem[] = [
+  { id: 'party-fox-mask', label: 'Party Fox Mask', slot: 'hat', spriteY: 0 },
+  { id: 'party-crimson', label: 'Crimson Body', slot: 'body', spriteY: 16.6667 },
+  { id: 'party-cobalt', label: 'Cobalt Body', slot: 'body', spriteY: 33.3333 },
+  { id: 'party-violet', label: 'Violet Body', slot: 'body', spriteY: 50 },
+  { id: 'party-emerald', label: 'Emerald Body', slot: 'body', spriteY: 66.6667 },
+  { id: 'party-gold', label: 'Gold Body', slot: 'body', spriteY: 83.3333 },
+  { id: 'party-frost', label: 'Frost Body', slot: 'body', spriteY: 100 },
+]
+
 const providers: ProviderOption[] = [
   { id: 'password', label: 'Email / Password', short: '✉', kind: 'email' },
   { id: 'phone', label: 'Phone', short: '☎', kind: 'phone' },
@@ -131,6 +155,15 @@ function Recruitment({ user, onOpenSasha }: RecruitmentProps) {
   const [busyProvider, setBusyProvider] = useState('')
   const [panel, setPanel] = useState<'email' | 'phone' | null>(null)
 
+  const [partyCode, setPartyCode] = useState('')
+  const [partyUnlocked, setPartyUnlocked] = useState(false)
+  const [partyItems, setPartyItems] = useState<string[]>([])
+  const [equippedPartyHat, setEquippedPartyHat] = useState('')
+  const [equippedPartyBody, setEquippedPartyBody] = useState('')
+  const [partyBusy, setPartyBusy] = useState(false)
+  const [partyMessage, setPartyMessage] = useState('')
+  const [partyError, setPartyError] = useState('')
+
   const [emailMode, setEmailMode] = useState<'signup' | 'login'>('signup')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -150,6 +183,87 @@ function Recruitment({ user, onOpenSasha }: RecruitmentProps) {
   useEffect(() => {
     setLinkedProviders(user?.providerData.map((provider) => provider.providerId) || [])
   }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setPartyUnlocked(false)
+      setPartyItems([])
+      setEquippedPartyHat('')
+      setEquippedPartyBody('')
+      return
+    }
+
+    const getStatus = httpsCallable<Record<string, never>, PartyCosmeticsStatus>(
+      functions,
+      'getPartyCosmeticsStatus',
+    )
+
+    void getStatus({})
+      .then((result) => {
+        setPartyUnlocked(result.data.unlocked === true)
+        setPartyItems(Array.isArray(result.data.items) ? result.data.items : [])
+        setEquippedPartyHat(result.data.equippedHat || '')
+        setEquippedPartyBody(result.data.equippedBody || '')
+      })
+      .catch((statusError) => {
+        console.error('Party cosmetic status failed', statusError)
+      })
+  }, [user])
+
+  const redeemPartyCode = async (event: FormEvent) => {
+    event.preventDefault()
+    if (!user || !partyCode.trim() || partyBusy) return
+
+    setPartyBusy(true)
+    setPartyMessage('')
+    setPartyError('')
+
+    try {
+      const redeem = httpsCallable<
+        { code: string },
+        { ok: boolean; unlocked: boolean; items: string[] }
+      >(functions, 'redeemPartyCosmetics')
+
+      const result = await redeem({ code: partyCode })
+      setPartyUnlocked(result.data.unlocked === true)
+      setPartyItems(Array.isArray(result.data.items) ? result.data.items : [])
+      setPartyCode('')
+      setPartyMessage('PARTY-EXCLUSIVE ITEMS UNLOCKED')
+    } catch (redeemError) {
+      setPartyError(cleanAuthError(redeemError) || 'That item code was not accepted.')
+    } finally {
+      setPartyBusy(false)
+    }
+  }
+
+  const equipPartyItem = async (item: PartyCosmeticItem) => {
+    if (!user || !partyUnlocked || partyBusy) return
+
+    setPartyBusy(true)
+    setPartyMessage('')
+    setPartyError('')
+
+    try {
+      const equip = httpsCallable<
+        { slot: 'hat' | 'body'; itemId: string },
+        { ok: boolean; slot: 'hat' | 'body'; itemId: string }
+      >(functions, 'equipPartyCosmetic')
+
+      await equip({ slot: item.slot, itemId: item.id })
+
+      if (item.slot === 'hat') {
+        setEquippedPartyHat(item.id)
+      } else {
+        setEquippedPartyBody(item.id)
+      }
+
+      setPartyMessage(`${item.label.toUpperCase()} EQUIPPED`)
+    } catch (equipError) {
+      setPartyError(cleanAuthError(equipError) || 'That cosmetic could not be equipped.')
+    } finally {
+      setPartyBusy(false)
+    }
+  }
 
   useEffect(
     () => () => {
@@ -567,6 +681,104 @@ function Recruitment({ user, onOpenSasha }: RecruitmentProps) {
           {(status || error) && (
             <div className={error ? 'recruitment-auth-message error' : 'recruitment-auth-message success'}>
               {error || status}
+            </div>
+          )}
+        </section>
+
+        <section className={partyUnlocked ? 'party-drop unlocked' : 'party-drop'}>
+          <div className="party-drop-heading">
+            <div>
+              <span className="card-label">PARTY-EXCLUSIVE DROP</span>
+              <h2>{partyUnlocked ? 'Your exclusive DANJI set.' : 'Enter an event code.'}</h2>
+              <p>
+                These cosmetics are not part of the normal unlock track. A valid private
+                event code unlocks the collection permanently on your DANJI account.
+              </p>
+            </div>
+            <span className={partyUnlocked ? 'party-drop-badge unlocked' : 'party-drop-badge'}>
+              {partyUnlocked ? 'UNLOCKED' : 'CODE REQUIRED'}
+            </span>
+          </div>
+
+          {!user ? (
+            <div className="party-drop-locked">
+              <strong>SIGN IN REQUIRED</strong>
+              <p>Become a DANJI member or sign in before redeeming an event code.</p>
+            </div>
+          ) : !partyUnlocked ? (
+            <form className="party-code-form" onSubmit={redeemPartyCode}>
+              <label>
+                <span>PRIVATE EVENT CODE</span>
+                <input
+                  type="password"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={partyCode}
+                  onChange={(event) => setPartyCode(event.target.value)}
+                  placeholder="Enter code"
+                  maxLength={64}
+                />
+              </label>
+              <button type="submit" disabled={partyBusy || !partyCode.trim()}>
+                {partyBusy ? 'CHECKING…' : 'REDEEM ITEMS'}
+              </button>
+            </form>
+          ) : (
+            <>
+              <div className="party-equipped-summary">
+                <span>
+                  <small>HAT SLOT</small>
+                  <strong>
+                    {partyCosmetics.find((item) => item.id === equippedPartyHat)?.label || 'None equipped'}
+                  </strong>
+                </span>
+                <span>
+                  <small>BODY SLOT</small>
+                  <strong>
+                    {partyCosmetics.find((item) => item.id === equippedPartyBody)?.label || 'None equipped'}
+                  </strong>
+                </span>
+              </div>
+
+              <div className="party-cosmetic-grid">
+                {partyCosmetics
+                  .filter((item) => partyItems.includes(item.id))
+                  .map((item) => {
+                    const equipped =
+                      item.slot === 'hat'
+                        ? equippedPartyHat === item.id
+                        : equippedPartyBody === item.id
+
+                    return (
+                      <article className={equipped ? 'party-cosmetic-card equipped' : 'party-cosmetic-card'} key={item.id}>
+                        <div
+                          className="party-cosmetic-thumb"
+                          style={{ backgroundPosition: `center ${item.spriteY}%` }}
+                          aria-label={item.label}
+                          role="img"
+                        />
+                        <div className="party-cosmetic-copy">
+                          <span>{item.slot === 'hat' ? 'EXCLUSIVE HAT' : 'EXCLUSIVE BODY'}</span>
+                          <strong>{item.label}</strong>
+                          <small>PARTY DROP // CODE EXCLUSIVE</small>
+                        </div>
+                        <button
+                          type="button"
+                          disabled={partyBusy || equipped}
+                          onClick={() => void equipPartyItem(item)}
+                        >
+                          {equipped ? 'EQUIPPED ✓' : 'EQUIP'}
+                        </button>
+                      </article>
+                    )
+                  })}
+              </div>
+            </>
+          )}
+
+          {(partyMessage || partyError) && (
+            <div className={partyError ? 'party-drop-feedback error' : 'party-drop-feedback success'}>
+              {partyError || partyMessage}
             </div>
           )}
         </section>
