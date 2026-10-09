@@ -10,6 +10,7 @@ initializeApp();
 
 const db = getFirestore();
 const openAiKey = defineSecret("OPENAI_API_KEY");
+const partyCosmeticCode = defineSecret("DANJI_PARTY_COSMETIC_CODE");
 
 const WINDOW_MS = 60 * 60 * 1000;
 const MAX_REQUESTS_PER_HOUR = 40;
@@ -1348,5 +1349,197 @@ exports.updateLeaderboardMember = onCall(
     });
 
     return { ok: true };
+  },
+);
+
+
+const PARTY_BODY_IDS = new Set([
+  "party-crimson",
+  "party-cobalt",
+  "party-violet",
+  "party-emerald",
+  "party-gold",
+  "party-frost",
+]);
+const PARTY_HAT_IDS = new Set(["party-fox-mask"]);
+const PARTY_COSMETIC_IDS = [
+  "party-fox-mask",
+  "party-crimson",
+  "party-cobalt",
+  "party-violet",
+  "party-emerald",
+  "party-gold",
+  "party-frost",
+];
+
+function constantTimePartyCodeMatch(submitted, expected) {
+  const normalizedSubmitted =
+    typeof submitted === "string" ? submitted.trim().toLowerCase() : "";
+  const normalizedExpected =
+    typeof expected === "string" ? expected.trim().toLowerCase() : "";
+
+  if (!normalizedSubmitted || !normalizedExpected) return false;
+
+  const left = createHash("sha256").update(normalizedSubmitted).digest();
+  const right = createHash("sha256").update(normalizedExpected).digest();
+
+  if (left.length !== right.length) return false;
+
+  let mismatch = 0;
+  for (let index = 0; index < left.length; index += 1) {
+    mismatch |= left[index] ^ right[index];
+  }
+  return mismatch === 0;
+}
+
+exports.getPartyCosmeticsStatus = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      return {
+        unlocked: false,
+        items: [],
+        equippedHat: "",
+        equippedBody: "",
+      };
+    }
+
+    const member = await db.collection("danjiMembers").doc(request.auth.uid).get();
+    const data = member.exists ? member.data() || {} : {};
+    const unlocked = data.partyExclusiveUnlocked === true;
+
+    return {
+      unlocked,
+      items: unlocked ? PARTY_COSMETIC_IDS : [],
+      equippedHat:
+        unlocked && PARTY_HAT_IDS.has(String(data.equippedPartyHat || ""))
+          ? String(data.equippedPartyHat)
+          : "",
+      equippedBody:
+        unlocked && PARTY_BODY_IDS.has(String(data.equippedPartyBody || ""))
+          ? String(data.equippedPartyBody)
+          : "",
+    };
+  },
+);
+
+exports.redeemPartyCosmetics = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+    secrets: [partyCosmeticCode],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in to your DANJI account before redeeming an item code.",
+      );
+    }
+
+    const submittedCode =
+      request.data && typeof request.data.code === "string"
+        ? request.data.code
+        : "";
+
+    if (!constantTimePartyCodeMatch(submittedCode, partyCosmeticCode.value())) {
+      throw new HttpsError("permission-denied", "That exclusive item code is not valid.");
+    }
+
+    const ref = db.collection("danjiMembers").doc(request.auth.uid);
+    const snapshot = await ref.get();
+
+    if (!snapshot.exists) {
+      await ensureDanjiMember(request.auth);
+    }
+
+    await ref.set(
+      {
+        partyExclusiveUnlocked: true,
+        partyExclusiveUnlockedAt: FieldValue.serverTimestamp(),
+        partyExclusiveItems: PARTY_COSMETIC_IDS,
+      },
+      { merge: true },
+    );
+
+    return {
+      ok: true,
+      unlocked: true,
+      items: PARTY_COSMETIC_IDS,
+    };
+  },
+);
+
+exports.equipPartyCosmetic = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in to your DANJI account before equipping cosmetics.",
+      );
+    }
+
+    const slot =
+      request.data && typeof request.data.slot === "string"
+        ? request.data.slot.trim().toLowerCase()
+        : "";
+    const itemId =
+      request.data && typeof request.data.itemId === "string"
+        ? request.data.itemId.trim().toLowerCase()
+        : "";
+
+    const ref = db.collection("danjiMembers").doc(request.auth.uid);
+    const snapshot = await ref.get();
+    const data = snapshot.exists ? snapshot.data() || {} : {};
+
+    if (data.partyExclusiveUnlocked !== true) {
+      throw new HttpsError(
+        "permission-denied",
+        "Redeem the party-exclusive code before equipping these items.",
+      );
+    }
+
+    if (slot === "hat") {
+      if (itemId && !PARTY_HAT_IDS.has(itemId)) {
+        throw new HttpsError("invalid-argument", "That hat is not available.");
+      }
+      await ref.set(
+        {
+          equippedPartyHat: itemId,
+          cosmeticsUpdatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      return { ok: true, slot, itemId };
+    }
+
+    if (slot === "body") {
+      if (itemId && !PARTY_BODY_IDS.has(itemId)) {
+        throw new HttpsError("invalid-argument", "That body is not available.");
+      }
+      await ref.set(
+        {
+          equippedPartyBody: itemId,
+          cosmeticsUpdatedAt: FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      return { ok: true, slot, itemId };
+    }
+
+    throw new HttpsError("invalid-argument", "Choose either the hat or body slot.");
   },
 );
