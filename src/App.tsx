@@ -7,10 +7,11 @@ import { auth, db, functions } from './firebase'
 import EthicalHacking from './EthicalHacking'
 import Leaderboard from './Leaderboard'
 import Recruitment from './Recruitment'
+import Shop from './Shop'
 import SeriaTracker from './SeriaTracker'
 import './App.css'
 
-type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'seria' | 'minecraft' | 'valorant' | 'ethical' | 'briefing' | 'archive'
+type Tab = 'welcome' | 'assistant' | 'recruitment' | 'leaderboard' | 'shop' | 'seria' | 'minecraft' | 'valorant' | 'ethical' | 'briefing' | 'archive'
 type SashaEmotion =
   | 'neutral'
   | 'happy'
@@ -306,6 +307,13 @@ function App() {
             onClick={() => setActiveTab('leaderboard')}
           >
             Leaderboard
+          </button>
+          <button
+            className={activeTab === 'shop' ? 'tab active shop-nav-tab' : 'tab shop-nav-tab'}
+            type="button"
+            onClick={() => setActiveTab('shop')}
+          >
+            Shop
           </button>
           <button
             className={activeTab === 'seria' ? 'tab active seria-nav-tab' : 'tab seria-nav-tab'}
