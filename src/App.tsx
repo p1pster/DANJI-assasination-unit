@@ -566,6 +566,11 @@ function App() {
           currentUid={user?.uid}
           onJoin={() => setActiveTab('recruitment')}
         />
+      ) : activeTab === 'shop' ? (
+        <Shop
+          user={user}
+          onJoin={() => setActiveTab('recruitment')}
+        />
       ) : activeTab === 'seria' ? (
         <SeriaTracker />
       ) : activeTab === 'minecraft' ? (
