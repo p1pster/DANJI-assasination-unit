@@ -570,8 +570,6 @@ function Recruitment({ user, onOpenSasha }: RecruitmentProps) {
             </div>
           )}
         </section>
-
-
       </div>
     </section>
   )
