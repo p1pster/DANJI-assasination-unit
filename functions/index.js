@@ -1477,6 +1477,57 @@ exports.redeemPartyCosmetics = onCall(
   },
 );
 
+exports.redeemPromoCode = onCall(
+  {
+    region: "europe-west2",
+    timeoutSeconds: 20,
+    memory: "256MiB",
+    maxInstances: 3,
+    secrets: [partyCosmeticCode],
+  },
+  async (request) => {
+    if (!request.auth) {
+      throw new HttpsError(
+        "unauthenticated",
+        "Sign in to your DANJI account before redeeming a promo code.",
+      );
+    }
+
+    const submittedCode =
+      request.data && typeof request.data.code === "string"
+        ? request.data.code
+        : "";
+
+    if (!constantTimePartyCodeMatch(submittedCode, partyCosmeticCode.value())) {
+      throw new HttpsError("permission-denied", "That promo code is not valid.");
+    }
+
+    const ref = db.collection("danjiMembers").doc(request.auth.uid);
+    const snapshot = await ref.get();
+
+    if (!snapshot.exists) {
+      await ensureDanjiMember(request.auth);
+    }
+
+    await ref.set(
+      {
+        partyExclusiveUnlocked: true,
+        partyExclusiveUnlockedAt: FieldValue.serverTimestamp(),
+        partyExclusiveItems: PARTY_COSMETIC_IDS,
+        lastPromoReward: "party-exclusive",
+      },
+      { merge: true },
+    );
+
+    return {
+      ok: true,
+      unlocked: true,
+      items: PARTY_COSMETIC_IDS,
+      reward: "party-exclusive",
+    };
+  },
+);
+
 exports.equipPartyCosmetic = onCall(
   {
     region: "europe-west2",
