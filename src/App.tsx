@@ -82,7 +82,7 @@ const starterMessages: ChatMessage[] = [
   {
     role: 'assistant',
     content:
-      'Sasha online. Ask me a question, give me something to plan, or just talk to me.',
+      'Sasha online. Need something? Ask. I’ll help if I can.',
     emotion: 'happy',
   },
 ]
